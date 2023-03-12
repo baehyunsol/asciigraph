@@ -47,9 +47,13 @@ pub struct Graph {
     padding_left: usize,
     padding_right: usize,
 
-    // only for 1d graphs
+    /// only for 1d graphs
     full_block_character: u16,
+    /// only for 1d graphs
     half_block_character: u16,
+    /// only for 1d graphs
+    overflow_character: u16,
+    /// only for 1d graphs
     y_label_formatter: fn(i64) -> String,
 
     // if None, the range is set automatically
@@ -120,6 +124,7 @@ impl Graph {
 
             full_block_character: '█' as u16,
             half_block_character: '▄' as u16,
+            overflow_character: '^' as u16,
             y_label_formatter: sns_int,
             y_max: None,
             y_min: None,
@@ -149,6 +154,11 @@ impl Graph {
 
     pub fn set_half_block_character(&mut self, half_block_character: u16) -> &mut Self {
         self.half_block_character = half_block_character;
+        self
+    }
+
+    pub fn set_overflow_character(&mut self, overflow_character: u16) -> &mut Self {
+        self.overflow_character = overflow_character;
         self
     }
 
@@ -341,7 +351,7 @@ impl Graph {
         for y in 0..(self.plot_height + 2) {
             result[y * line_width + (line_width - 1)] = '\n' as u16;
 
-            if y != self.plot_height + 1 {
+            if y < self.plot_height {
                 result[y * line_width + self.y_label_max_len + 1 + self.padding_left] = '|' as u16;
 
                 if y % self.y_label_interval == 0 {
@@ -357,9 +367,17 @@ impl Graph {
 
         }
 
+        result[self.plot_height * line_width + self.y_label_max_len + 1 + self.padding_left] = '└' as u16;
+
         for x in 0..plot_width {
             let (curr_x_label, curr_val) = data[x * data.len() / plot_width].clone();
-            let mut start_y = if y_max > curr_val { ((y_max - curr_val) * 2 / y_grid_size) as usize } else { 0 };
+            let mut overflow = false;
+            let mut start_y = if y_max > curr_val {
+                ((y_max - curr_val) * 2 / y_grid_size) as usize
+            } else {
+                overflow = true;
+                0
+            };
             let use_half_block_character = start_y % 2 == 1;
             start_y /= 2;
 
@@ -371,6 +389,10 @@ impl Graph {
 
             if use_half_block_character && start_y < self.plot_height {
                 result[start_y * line_width + x + self.y_label_max_len + 2 + self.padding_left] = self.half_block_character;
+            }
+
+            else if overflow {
+                result[x + self.y_label_max_len + 2 + self.padding_left] = self.overflow_character;
             }
 
             if x % self.x_label_interval == 0 {
@@ -416,7 +438,7 @@ impl Graph {
         for y in 0..(self.plot_height + 2) {
             result[y * line_width + (line_width - 1)] = '\n' as u16;
 
-            if y != self.plot_height + 1 {
+            if y < self.plot_height {
                 result[y * line_width + self.y_label_max_len + 1 + self.padding_left] = '|' as u16;
 
                 if y != self.plot_height && y_labels[y].is_some() {
@@ -431,6 +453,8 @@ impl Graph {
             }
 
         }
+
+        result[self.plot_height * line_width + self.y_label_max_len + 1 + self.padding_left] = '└' as u16;
 
         let mut last_x = 0;
 
