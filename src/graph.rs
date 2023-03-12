@@ -37,6 +37,8 @@ pub struct Graph {
     plot_width: usize,
     plot_height: usize,
 
+    block_width: Option<usize>,
+
     x_axis_label: Option<String>,
     y_axis_label: Option<String>,
 
@@ -88,14 +90,30 @@ impl GraphData {
 
 impl Graph {
 
-    pub fn new(plot_width: usize, plot_height: usize) -> Self {
+    pub fn new(mut plot_width: usize, plot_height: usize) -> Self {
+
+        if plot_width < 20 {
+            println!("Warning: `plot_width` too small");
+        }
+
+        if plot_height < 8 {
+            println!("Warning: `plot_height` too small");
+        }
+
+        if plot_width % 2 == 1 {
+            println!("Warning: odd `plot_width` is not supported yet! it'll adjust the width");
+            plot_width += 1;
+        }
+
         Graph {
-            plot_width: plot_width.max(20),
-            plot_height: plot_height.max(8),
+            plot_width,
+            plot_height,
             title: None,
             x_label_interval: 8,
             y_label_interval: 3,
             y_label_max_len: 6,
+
+            block_width: None,
 
             x_axis_label: None,
             y_axis_label: None,
@@ -139,12 +157,18 @@ impl Graph {
         self
     }
 
-    pub fn set_plot_width(&mut self, plot_width: usize) -> &mut Self {
-        self.plot_width = plot_width;
+    pub fn set_plot_width(&mut self, mut plot_width: usize) -> &mut Self {
 
         if plot_width < 20 {
             println!("Warning: `plot_width` too small");
         }
+
+        if plot_width % 2 == 1 {
+            println!("Warning: odd `plot_width` is not supported yet! it'll adjust the width");
+            plot_width += 1;
+        }
+
+        self.plot_width = plot_width;
 
         self
     }
@@ -154,6 +178,22 @@ impl Graph {
 
         if plot_height < 8 {
             println!("Warning: `plot_height` too small");
+        }
+
+        self
+    }
+
+    /// It works only with 1d data.
+    /// It makes sense when `self.data.len()` is small enough.
+    /// If both `self.plot_width` and `self.block_width` are set, `block_width` has a precedence.
+    pub fn set_block_width(&mut self, block_width: usize) -> &mut Self {
+        self.block_width = Some(block_width);
+
+        match &self.data {
+            GraphData::OneDimensional(v) => {
+                self.plot_width = v.len() * block_width;
+            }
+            _ => {}
         }
 
         self
@@ -180,6 +220,14 @@ impl Graph {
     }
 
     pub fn set_1d_data(&mut self, data: Vec<(String, i64)>) -> &mut Self {
+
+        match self.block_width {
+            Some(n) => {
+                self.plot_width = data.len() * n;
+            }
+            _ => {}
+        }
+
         self.data = GraphData::OneDimensional(data);
         self
     }
@@ -268,18 +316,29 @@ impl Graph {
     }
 
     fn draw_1d(&self) -> String {
-        let data = self.data.unwrap_1d();
-        let data_max = data.iter().map(|(_, n)| n).max().unwrap();
-        let data_min = data.iter().map(|(_, n)| n).min().unwrap();
+        let mut data = self.data.unwrap_1d();
+
+        if data.len() > self.plot_width * 8 {
+            data = fit_data(&data, self.plot_width);
+        }
+
+        let data_max = *data.iter().map(|(_, n)| n).max().unwrap();
+        let data_min = *data.iter().map(|(_, n)| n).min().unwrap();
         let line_width = self.plot_width + self.y_label_max_len + self.padding_left + self.padding_right + 3;
 
         let padding_top = draw_lines(line_width, self.padding_top);
         let padding_bottom = draw_lines(line_width, self.padding_bottom);
 
-        let y_max = if let Some(n) = self.y_max { n } else { data_max + (data_max / 4).abs() };
-        let y_min = if let Some(n) = self.y_min { n } else { data_min - (data_min / 4).abs() };
+        let graph_margin = (data_max - data_min) / 8 + 1;
+        let y_max = if let Some(n) = self.y_max { n } else if data_max < i64::MAX - graph_margin { data_max + graph_margin } else { data_max };
+        let y_min = if let Some(n) = self.y_min { n } else if data_min > i64::MIN + graph_margin { data_min - graph_margin } else { data_min };
 
-        let y_grid_size = (y_max - y_min) / self.plot_height as i64;
+        let mut y_grid_size = (y_max - y_min) / self.plot_height as i64;
+
+        // an error from integer division made a problem
+        if y_max - (self.plot_height - 1) as i64 * y_grid_size > data_min {
+            y_grid_size += 1;
+        }
 
         let mut result = vec![' ' as u16; line_width * (self.plot_height + 2)];
 
@@ -497,4 +556,48 @@ fn draw_lines(line_width: usize, height: usize) -> Vec<u16> {
     }
 
     vec![vec![vec![' ' as u16; line_width - 1], vec!['\n' as u16]].concat(); height].concat()
+}
+
+fn fit_data(data: &Vec<(String, i64)>, width: usize) -> Vec<(String, i64)> {
+    // a graph with odd-sized width is not supported because of this line
+    let half_width = width / 2;
+
+    let mut last_ind = 0;
+    let mut result = Vec::with_capacity(width);
+
+    for i in 0..half_width {
+        let curr_ind = (i + 1) * data.len() / half_width;
+        let mut min_ind = 0;
+        let mut min_val = data[last_ind].1;
+        let mut max_ind = 0;
+        let mut max_val = data[last_ind].1;
+
+        for (ind, (_, val)) in data[last_ind..curr_ind].iter().enumerate() {
+
+            if val > &max_val {
+                max_ind = ind;
+                max_val = *val;
+            }
+
+            else if val < &min_val {
+                min_ind = ind;
+                min_val = *val;
+            }
+
+        }
+
+        if min_ind < max_ind {
+            result.push(data[last_ind + min_ind].clone());
+            result.push(data[last_ind + max_ind].clone());
+        }
+
+        else {
+            result.push(data[last_ind + max_ind].clone());
+            result.push(data[last_ind + min_ind].clone());
+        }
+
+        last_ind = curr_ind;
+    }
+
+    result
 }

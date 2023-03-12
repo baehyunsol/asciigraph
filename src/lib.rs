@@ -2,9 +2,6 @@ mod graph;
 mod utils;
 mod merge;
 
-#[cfg(test)]
-mod testbench;
-
 /// It assumes a korean character (한글) consumes 2 spaces.
 /// For real numbers, it uses fixed point numbers. (24 bits for fractional parts)
 
