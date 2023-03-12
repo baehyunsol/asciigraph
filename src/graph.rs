@@ -1,3 +1,5 @@
+mod setters;
+
 use crate::utils::{into_v16, from_v16, right_align, sns_int, fractional_number};
 
 // All the strings returned by `Graph::draw()`, `merge_vert()` and `merge_horiz()` must be rectangles
