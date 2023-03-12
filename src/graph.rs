@@ -90,7 +90,7 @@ impl GraphData {
 
 impl Graph {
 
-    pub fn new(mut plot_width: usize, plot_height: usize) -> Self {
+    pub fn new(plot_width: usize, plot_height: usize) -> Self {
 
         if plot_width < 20 {
             println!("Warning: `plot_width` too small");
@@ -98,11 +98,6 @@ impl Graph {
 
         if plot_height < 8 {
             println!("Warning: `plot_height` too small");
-        }
-
-        if plot_width % 2 == 1 {
-            println!("Warning: odd `plot_width` is not supported yet! it'll adjust the width");
-            plot_width += 1;
         }
 
         Graph {
@@ -157,18 +152,12 @@ impl Graph {
         self
     }
 
-    pub fn set_plot_width(&mut self, mut plot_width: usize) -> &mut Self {
+    pub fn set_plot_width(&mut self, plot_width: usize) -> &mut Self {
+        self.plot_width = plot_width;
 
         if plot_width < 20 {
             println!("Warning: `plot_width` too small");
         }
-
-        if plot_width % 2 == 1 {
-            println!("Warning: odd `plot_width` is not supported yet! it'll adjust the width");
-            plot_width += 1;
-        }
-
-        self.plot_width = plot_width;
 
         self
     }
@@ -317,14 +306,21 @@ impl Graph {
 
     fn draw_1d(&self) -> String {
         let mut data = self.data.unwrap_1d();
+        let mut plot_width = self.plot_width;
 
-        if data.len() > self.plot_width * 8 {
-            data = fit_data(&data, self.plot_width);
+        if data.len() > plot_width * 8 {
+
+            if plot_width % 2 == 1 {
+                println!("Warning: odd `plot_width` is not supported yet! it'll adjust the width...");
+                plot_width += 1;
+            }
+
+            data = fit_data(&data, plot_width);
         }
 
         let data_max = *data.iter().map(|(_, n)| n).max().unwrap();
         let data_min = *data.iter().map(|(_, n)| n).min().unwrap();
-        let line_width = self.plot_width + self.y_label_max_len + self.padding_left + self.padding_right + 3;
+        let line_width = plot_width + self.y_label_max_len + self.padding_left + self.padding_right + 3;
 
         let padding_top = draw_lines(line_width, self.padding_top);
         let padding_bottom = draw_lines(line_width, self.padding_bottom);
@@ -361,8 +357,8 @@ impl Graph {
 
         }
 
-        for x in 0..self.plot_width {
-            let (curr_x_label, curr_val) = data[x * data.len() / self.plot_width].clone();
+        for x in 0..plot_width {
+            let (curr_x_label, curr_val) = data[x * data.len() / plot_width].clone();
             let mut start_y = if y_max > curr_val { ((y_max - curr_val) * 2 / y_grid_size) as usize } else { 0 };
             let use_half_block_character = start_y % 2 == 1;
             start_y /= 2;
@@ -380,7 +376,7 @@ impl Graph {
             if x % self.x_label_interval == 0 {
                 let xlabel = into_v16(&curr_x_label);
 
-                if x + xlabel.len() < self.plot_width + 1 {
+                if x + xlabel.len() < plot_width + 1 {
 
                     for xx in 0..xlabel.len() {
                         result[(self.plot_height + 1) * line_width + x + self.y_label_max_len + 2 + xx + self.padding_left] = xlabel[xx];
