@@ -331,16 +331,35 @@ impl Graph {
             data = fit_data(&data, plot_width);
         }
 
-        let data_max = *data.iter().map(|(_, n)| n).max().unwrap();
-        let data_min = *data.iter().map(|(_, n)| n).min().unwrap();
+        let data_max = if let Some(n) = data.iter().map(|(_, n)| n).max() { *n } else { 0 };
+        let data_min = if let Some(n) = data.iter().map(|(_, n)| n).min() { *n } else { 0 };
         let line_width = plot_width + self.y_label_max_len + self.padding_left + self.padding_right + 3;
 
         let padding_top = draw_empty_lines(line_width, self.padding_top);
         let padding_bottom = draw_empty_lines(line_width, self.padding_bottom);
 
         let graph_margin = (data_max - data_min) / 8 + 1;
-        let y_max = if let Some(n) = self.y_max { n } else if data_max < i64::MAX - graph_margin { data_max + graph_margin } else { data_max };
-        let y_min = if let Some(n) = self.y_min { n } else if data_min > i64::MIN + graph_margin { data_min - graph_margin } else { data_min };
+        let mut y_max = if let Some(n) = self.y_max { n } else if data_max < i64::MAX - graph_margin { data_max + graph_margin } else { data_max };
+        let mut y_min = if let Some(n) = self.y_min { n } else if data_min > i64::MIN + graph_margin { data_min - graph_margin } else { data_min };
+
+        if data_max == data_min && self.y_max.is_none() && self.y_min.is_none() {
+
+            if data_max > i64::MAX - 800 {
+                y_max = i64::MAX;
+                y_min = i64::MAX - 800;
+            }
+
+            else if data_min < i64::MIN + 800 {
+                y_max = i64::MIN + 800;
+                y_min = i64::MIN;
+            }
+
+            else {
+                y_max = data_max + 800;
+                y_min = data_min - 800;
+            }
+
+        }
 
         let mut y_grid_size = (y_max - y_min) / plot_height as i64;
 
@@ -373,44 +392,47 @@ impl Graph {
         result[plot_height * line_width + self.y_label_max_len + 1 + self.padding_left] = '└' as u16;
 
         for x in 0..plot_width {
-            let (curr_x_label, curr_val) = data[x * data.len() / plot_width].clone();
-            let mut overflow = false;
-            let mut start_y = if y_max > curr_val {
-                ((y_max - curr_val) * 2 / y_grid_size) as usize
-            } else {
-                overflow = true;
-                0
-            };
-            let use_half_block_character = start_y % 2 == 1;
-            start_y /= 2;
 
-            result[plot_height * line_width + x + self.y_label_max_len + 2 + self.padding_left] = '-' as u16;
+            if data.len() > 0 {
+                let (curr_x_label, curr_val) = data[x * data.len() / plot_width].clone();
+                let mut overflow = false;
+                let mut start_y = if y_max > curr_val {
+                    ((y_max - curr_val) * 2 / y_grid_size) as usize
+                } else {
+                    overflow = true;
+                    0
+                };
+                let use_half_block_character = start_y % 2 == 1;
+                start_y /= 2;
 
-            for y in start_y..plot_height {
-                result[y * line_width + x + self.y_label_max_len + 2 + self.padding_left] = self.full_block_character;
-            }
+                for y in start_y..plot_height {
+                    result[y * line_width + x + self.y_label_max_len + 2 + self.padding_left] = self.full_block_character;
+                }
 
-            if use_half_block_character && start_y < plot_height {
-                result[start_y * line_width + x + self.y_label_max_len + 2 + self.padding_left] = self.half_block_character;
-            }
+                if use_half_block_character && start_y < plot_height {
+                    result[start_y * line_width + x + self.y_label_max_len + 2 + self.padding_left] = self.half_block_character;
+                }
 
-            else if overflow {
-                result[x + self.y_label_max_len + 2 + self.padding_left] = self.overflow_character;
-            }
+                else if overflow {
+                    result[x + self.y_label_max_len + 2 + self.padding_left] = self.overflow_character;
+                }
 
-            if x % self.x_label_interval == 0 {
-                let xlabel = into_v16(&curr_x_label);
+                if x % self.x_label_interval == 0 {
+                    let xlabel = into_v16(&curr_x_label);
 
-                if x + xlabel.len() < plot_width + 1 {
+                    if x + xlabel.len() < plot_width + 1 {
 
-                    for xx in 0..xlabel.len() {
-                        result[(plot_height + 1) * line_width + x + self.y_label_max_len + 2 + xx + self.padding_left] = xlabel[xx];
+                        for xx in 0..xlabel.len() {
+                            result[(plot_height + 1) * line_width + x + self.y_label_max_len + 2 + xx + self.padding_left] = xlabel[xx];
+                        }
+
                     }
 
                 }
 
             }
 
+            result[plot_height * line_width + x + self.y_label_max_len + 2 + self.padding_left] = '-' as u16;
         }
 
         result = vec![

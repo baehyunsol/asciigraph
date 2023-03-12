@@ -49,10 +49,10 @@ pub fn sns_int(n: i64) -> String {
         }
 
         else if n < 10_000 {
-            let k = n / 1000;
-            let sk = n / 100 % 10;
+            let k =  n / 1000;
+            let sk = n / 10 % 100;
 
-            format!("{}.{}K", k, sk)
+            format!("{}.{:02}K", k, sk)
         }
 
         else if n < 1_000_000 {
@@ -60,10 +60,10 @@ pub fn sns_int(n: i64) -> String {
         }
 
         else if n < 10_000_000 {
-            let m = n / 1_000_000;
-            let sm = n / 100_000 % 10;
+            let m =  n / 1_000_000;
+            let sm = n / 10_000 % 100;
 
-            format!("{}.{}M", m, sm)
+            format!("{}.{:02}M", m, sm)
         }
 
         else if n < 1_000_000_000 {
@@ -71,10 +71,10 @@ pub fn sns_int(n: i64) -> String {
         }
 
         else if n < 10_000_000_000 {
-            let b = n / 1_000_000_000;
-            let sb = n / 100_000_000 % 10;
+            let b =  n / 1_000_000_000;
+            let sb = n / 10_000_000 % 100;
 
-            format!("{}.{}B", b, sb)
+            format!("{}.{:02}B", b, sb)
         }
 
         else if n < 1_000_000_000_000 {
@@ -82,14 +82,24 @@ pub fn sns_int(n: i64) -> String {
         }
 
         else if n < 10_000_000_000_000 {
-            let t = n / 1_000_000_000_000;
-            let st = n / 100_000_000_000 % 10;
+            let t =  n / 1_000_000_000_000;
+            let st = n / 10_000_000_000 % 100;
 
-            format!("{}.{}T", t, st)
+            format!("{}.{:02}T", t, st)
+        }
+
+        else if n < 1_000_000_000_000_000 {
+            format!("{}T", n / 1_000_000_000_000)
+        }
+
+        else if n < 10_000_000_000_000_000 {
+            let q =  n / 1_000_000_000_000_000;
+            let sq = n / 10_000_000_000_000 % 100;
+            format!("{}.{:02}Q", q, sq)
         }
 
         else {
-            format!("{}T", n / 1_000_000_000_000)
+            format!("{}Q", n / 1_000_000_000_000_000)
         }
 
     }
