@@ -140,3 +140,11 @@ pub fn fractional_number(n: i64) -> String {
     }
 
 }
+
+pub fn into_lines(string: &String) -> Vec<Vec<u16>> {
+    into_v16(string).split(
+        |c| *c == '\n' as u16
+    ).map(
+        |line| line.to_vec()
+    ).collect()
+}

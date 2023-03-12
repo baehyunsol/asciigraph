@@ -1,4 +1,4 @@
-use crate::utils::{into_v16, from_v16};
+use crate::utils::{from_v16, into_lines};
 
 /// merge 2 graphs with this function
 pub fn merge_vert(str1: &String, str2: &String, margin: usize, alignment: Alignment) -> String {
@@ -11,16 +11,8 @@ pub fn merge_vert(str1: &String, str2: &String, margin: usize, alignment: Alignm
         return str1.to_string();
     }
 
-    let mut lines1: Vec<Vec<u16>> = into_v16(str1).split(
-        |c| *c == '\n' as u16
-    ).map(
-        |line| line.to_vec()
-    ).collect();
-    let mut lines2: Vec<Vec<u16>> = into_v16(str2).split(
-        |c| *c == '\n' as u16
-    ).map(
-        |line| line.to_vec()
-    ).collect();
+    let mut lines1 = into_lines(str1);
+    let mut lines2 = into_lines(str2);
 
     let line_width = lines1[0].len().max(lines2[0].len());
     let mut line1_left_padding = 0;
@@ -90,16 +82,8 @@ pub fn merge_horiz(str1: &String, str2: &String, margin: usize) -> String {
         return str1.to_string();
     }
 
-    let lines1: Vec<Vec<u16>> = into_v16(&str1).split(
-        |c| *c == '\n' as u16
-    ).map(
-        |line| line.to_vec()
-    ).collect();
-    let lines2: Vec<Vec<u16>> = into_v16(&str2).split(
-        |c| *c == '\n' as u16
-    ).map(
-        |line| line.to_vec()
-    ).collect();
+    let lines1 = into_lines(str1);
+    let lines2 = into_lines(str2);
 
     if lines1.len() == lines2.len() {
         from_v16(&(0..lines1.len()).map(
