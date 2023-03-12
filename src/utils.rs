@@ -122,7 +122,7 @@ pub fn fractional_number(n: i64) -> String {
             }
 
             else {
-                format!("{}.{}", integer, fraction)
+                format!("{}.{:03}", integer, fraction)
             }
 
         }

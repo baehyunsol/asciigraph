@@ -96,14 +96,6 @@ impl Graph {
 
     pub fn new(plot_width: usize, plot_height: usize) -> Self {
 
-        if plot_width < 20 {
-            println!("Warning: `plot_width` too small");
-        }
-
-        if plot_height < 8 {
-            println!("Warning: `plot_height` too small");
-        }
-
         Graph {
             plot_width,
             plot_height,
@@ -165,26 +157,18 @@ impl Graph {
     pub fn set_plot_width(&mut self, plot_width: usize) -> &mut Self {
         self.plot_width = plot_width;
 
-        if plot_width < 20 {
-            println!("Warning: `plot_width` too small");
-        }
-
         self
     }
 
     pub fn set_plot_height(&mut self, plot_height: usize) -> &mut Self {
         self.plot_height = plot_height;
 
-        if plot_height < 8 {
-            println!("Warning: `plot_height` too small");
-        }
-
         self
     }
 
     /// It works only with 1d data.
     /// It makes sense when `self.data.len()` is small enough.
-    /// If both `self.plot_width` and `self.block_width` are set, `block_width` has a precedence.
+    /// If both `self.plot_width` and `self.block_width` are set, `plot_width` has no effect.
     pub fn set_block_width(&mut self, block_width: usize) -> &mut Self {
         self.block_width = Some(block_width);
 
@@ -234,6 +218,14 @@ impl Graph {
     /// It uses fixed point numbers to represent real numbers. It uses 12 bits for the fractional parts.
     /// If you want another representation, you have to implement by yourself.
     pub fn set_1d_data_float(&mut self, data: Vec<(String, f64)>) -> &mut Self {
+
+        match self.block_width {
+            Some(n) => {
+                self.plot_width = data.len() * n;
+            }
+            _ => {}
+        }
+
         self.data = GraphData::OneDimensional(data.into_iter().map(
             |(s, n)| (s, (n * 4096.0) as i64)
         ).collect());
@@ -317,6 +309,17 @@ impl Graph {
     fn draw_1d(&self) -> String {
         let mut data = self.data.unwrap_1d();
         let mut plot_width = self.plot_width;
+        let mut plot_height = self.plot_height;
+
+        if plot_width < 3 {
+            println!("Warning: `plot_width` is too small! it'll adjust the width...");
+            plot_width = 3;
+        }
+
+        if plot_height < 3 {
+            println!("Warning: `plot_height` is too small! it'll adjust the height...");
+            plot_height = 3;
+        }
 
         if data.len() > plot_width * 8 {
 
@@ -332,26 +335,26 @@ impl Graph {
         let data_min = *data.iter().map(|(_, n)| n).min().unwrap();
         let line_width = plot_width + self.y_label_max_len + self.padding_left + self.padding_right + 3;
 
-        let padding_top = draw_lines(line_width, self.padding_top);
-        let padding_bottom = draw_lines(line_width, self.padding_bottom);
+        let padding_top = draw_empty_lines(line_width, self.padding_top);
+        let padding_bottom = draw_empty_lines(line_width, self.padding_bottom);
 
         let graph_margin = (data_max - data_min) / 8 + 1;
         let y_max = if let Some(n) = self.y_max { n } else if data_max < i64::MAX - graph_margin { data_max + graph_margin } else { data_max };
         let y_min = if let Some(n) = self.y_min { n } else if data_min > i64::MIN + graph_margin { data_min - graph_margin } else { data_min };
 
-        let mut y_grid_size = (y_max - y_min) / self.plot_height as i64;
+        let mut y_grid_size = (y_max - y_min) / plot_height as i64;
 
         // an error from integer division made a problem
-        if y_max - (self.plot_height - 1) as i64 * y_grid_size > data_min {
+        if y_max - (plot_height - 1) as i64 * y_grid_size > data_min {
             y_grid_size += 1;
         }
 
-        let mut result = vec![' ' as u16; line_width * (self.plot_height + 2)];
+        let mut result = vec![' ' as u16; line_width * (plot_height + 2)];
 
-        for y in 0..(self.plot_height + 2) {
+        for y in 0..(plot_height + 2) {
             result[y * line_width + (line_width - 1)] = '\n' as u16;
 
-            if y < self.plot_height {
+            if y < plot_height {
                 result[y * line_width + self.y_label_max_len + 1 + self.padding_left] = '|' as u16;
 
                 if y % self.y_label_interval == 0 {
@@ -367,7 +370,7 @@ impl Graph {
 
         }
 
-        result[self.plot_height * line_width + self.y_label_max_len + 1 + self.padding_left] = '└' as u16;
+        result[plot_height * line_width + self.y_label_max_len + 1 + self.padding_left] = '└' as u16;
 
         for x in 0..plot_width {
             let (curr_x_label, curr_val) = data[x * data.len() / plot_width].clone();
@@ -381,13 +384,13 @@ impl Graph {
             let use_half_block_character = start_y % 2 == 1;
             start_y /= 2;
 
-            result[self.plot_height * line_width + x + self.y_label_max_len + 2 + self.padding_left] = '-' as u16;
+            result[plot_height * line_width + x + self.y_label_max_len + 2 + self.padding_left] = '-' as u16;
 
-            for y in start_y..self.plot_height {
+            for y in start_y..plot_height {
                 result[y * line_width + x + self.y_label_max_len + 2 + self.padding_left] = self.full_block_character;
             }
 
-            if use_half_block_character && start_y < self.plot_height {
+            if use_half_block_character && start_y < plot_height {
                 result[start_y * line_width + x + self.y_label_max_len + 2 + self.padding_left] = self.half_block_character;
             }
 
@@ -401,7 +404,7 @@ impl Graph {
                 if x + xlabel.len() < plot_width + 1 {
 
                     for xx in 0..xlabel.len() {
-                        result[(self.plot_height + 1) * line_width + x + self.y_label_max_len + 2 + xx + self.padding_left] = xlabel[xx];
+                        result[(plot_height + 1) * line_width + x + self.y_label_max_len + 2 + xx + self.padding_left] = xlabel[xx];
                     }
 
                 }
@@ -430,8 +433,8 @@ impl Graph {
 
         let line_width = self.plot_width + self.y_label_max_len + 3 + self.padding_left + self.padding_right;
 
-        let padding_top = draw_lines(line_width, self.padding_top);
-        let padding_bottom = draw_lines(line_width, self.padding_bottom);
+        let padding_top = draw_empty_lines(line_width, self.padding_top);
+        let padding_bottom = draw_empty_lines(line_width, self.padding_bottom);
 
         let mut result = vec![' ' as u16; line_width * (self.plot_height + 2)];
 
@@ -569,7 +572,7 @@ impl Graph {
 
 }
 
-fn draw_lines(line_width: usize, height: usize) -> Vec<u16> {
+fn draw_empty_lines(line_width: usize, height: usize) -> Vec<u16> {
 
     if height == 0 {
         return vec![];

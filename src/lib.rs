@@ -7,12 +7,3 @@ mod merge;
 
 pub use graph::Graph;
 pub use merge::{merge_horiz, merge_vert, Alignment};
-
-#[test]
-fn mmm() {
-    let data: Vec<(String, i64)> = (0..256).map(|n| (n.to_string(), n)).collect();
-
-    let ddd = Graph::new(36, 18).set_1d_data(data).set_y_max(128).draw();
-
-    println!("{ddd}");
-}
