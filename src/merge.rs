@@ -128,6 +128,7 @@ pub fn merge_horiz(str1: &String, str2: &String, margin: usize) -> String {
 
 }
 
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Alignment {
     Left, Right, Center
 }
