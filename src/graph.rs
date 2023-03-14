@@ -133,7 +133,7 @@ impl Graph {
             padding_left: 0,
             padding_right: 0,
 
-            skip_value: SkipValue::None,
+            skip_value: SkipValue::Auto,
             full_block_character: '█' as u16,
             half_block_character: '▄' as u16,
             overflow_character: '^' as u16,
@@ -238,7 +238,7 @@ impl Graph {
             let upper_y_max = if let Some(n) = self.y_max { n } else if data_max > i64::MAX - (data_max - skip_to) / 8 {
                 i64::MAX
             } else {
-                data_max + (data_max - skip_to) / 8
+                data_max + (data_max - skip_to) / 8 + 1
             };
             let upper_y_min = skip_to - (data_max - skip_to) / 8;
 
@@ -246,7 +246,7 @@ impl Graph {
             let lower_y_min = if let Some(n) = self.y_min { n } else if data_min < i64::MIN + (skip_from - data_min) / 8 {
                 i64::MIN
             } else {
-                data_min - (skip_from - data_min) / 8
+                data_min - (skip_from - data_min) / 8 - 1
             };
 
             let mut upper_graph_height = plot_height / 3;
