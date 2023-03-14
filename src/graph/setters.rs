@@ -1,4 +1,4 @@
-use super::{Graph, GraphData};
+use super::{Graph, GraphData, SkipValue};
 use crate::utils::{sns_int, fractional_number};
 
 impl Graph {
@@ -175,6 +175,13 @@ impl Graph {
     pub fn set_y_range(&mut self, y_min: i64, y_max: i64) -> &mut Self {
         self.y_min = Some(y_min);
         self.y_max = Some(y_max);
+        self
+    }
+
+    /// it does not plot data between this range.
+    /// it's applied only when the height of the plot is greater than 16
+    pub fn set_skip_values(&mut self, skip_value: SkipValue) -> &mut Self {
+        self.skip_value = skip_value;
         self
     }
 

@@ -1,6 +1,6 @@
 mod setters;
 
-use crate::utils::{into_v16, from_v16, right_align, sns_int};
+use crate::utils::{into_v16, from_v16, right_align, sns_int, into_lines};
 
 // All the strings returned by `Graph::draw()`, `merge_vert()` and `merge_horiz()` must be rectangles
 
@@ -58,6 +58,8 @@ pub struct Graph {
     /// only for 1d graphs
     y_label_formatter: fn(i64) -> String,
 
+    skip_value: SkipValue,
+
     // if None, the range is set automatically
     y_min: Option<i64>,
     y_max: Option<i64>
@@ -72,6 +74,13 @@ enum GraphData {
         data: Vec<(usize, usize, u16)>
     },
     None
+}
+
+#[derive(Clone)]
+pub enum SkipValue {
+    None,
+    Auto,
+    Range(i64, i64)
 }
 
 impl GraphData {
@@ -124,6 +133,7 @@ impl Graph {
             padding_left: 0,
             padding_right: 0,
 
+            skip_value: SkipValue::None,
             full_block_character: '█' as u16,
             half_block_character: '▄' as u16,
             overflow_character: '^' as u16,
@@ -169,12 +179,11 @@ impl Graph {
             data = fit_data(&data, plot_width);
         }
 
-        let data_max = if let Some(n) = data.iter().map(|(_, n)| n).max() { *n } else { 0 };
-        let data_min = if let Some(n) = data.iter().map(|(_, n)| n).min() { *n } else { 0 };
-        let line_width = plot_width + self.y_label_max_len + self.padding_left + self.padding_right + 3;
+        let mut data_sorted = data.clone();
+        data_sorted.sort_by_key(|(_, val)| *val);
 
-        let padding_top = draw_empty_lines(line_width, self.padding_top);
-        let padding_bottom = draw_empty_lines(line_width, self.padding_bottom);
+        let data_max = if data.len() > 0 { data_sorted[data.len() - 1].1 } else { 0 };
+        let data_min = if data.len() > 0 { data_sorted[0].1 } else { 0 };
 
         let graph_margin = (data_max - data_min) / 8 + 1;
         let mut y_max = if let Some(n) = self.y_max { n } else if data_max < i64::MAX - graph_margin { data_max + graph_margin } else { data_max };
@@ -199,11 +208,111 @@ impl Graph {
 
         }
 
+        if let Some((skip_from, skip_to)) = match self.skip_value {
+            SkipValue::Auto if data.len() > 1 && plot_height > 16 => {
+                let mut max_diff = 0;
+                let mut suspicious = (0, 0);
+
+                for i in 0..(data.len() - 1) {
+                    let diff = data_sorted[i + 1].1 - data_sorted[i].1;
+
+                    if diff > max_diff {
+                        max_diff = diff;
+                        suspicious = (data_sorted[i].1, data_sorted[i + 1].1);
+                    }
+
+                }
+
+                if max_diff > (data_max - data_min) / 4 && max_diff > 4 {
+                    Some((suspicious.0 + 1, suspicious.1 - 1))
+                }
+
+                else {
+                    None
+                }
+
+            }
+            SkipValue::Range(skip_from, skip_to) if plot_height > 16 => Some((skip_from, skip_to)),
+            _ => None
+        } {
+            let upper_y_max = if let Some(n) = self.y_max { n } else if data_max > i64::MAX - (data_max - skip_to) / 8 {
+                i64::MAX
+            } else {
+                data_max + (data_max - skip_to) / 8
+            };
+            let upper_y_min = skip_to - (data_max - skip_to) / 8;
+
+            let lower_y_max = skip_from + (skip_from - data_min) / 8;
+            let lower_y_min = if let Some(n) = self.y_min { n } else if data_min < i64::MIN + (skip_from - data_min) / 8 {
+                i64::MIN
+            } else {
+                data_min - (skip_from - data_min) / 8
+            };
+
+            let mut upper_graph_height = plot_height / 3;
+            let mut lower_graph_height = plot_height - upper_graph_height - 1;
+
+            // upper_graph has more values
+            if skip_to < data_sorted[data.len() / 2].1 {
+                let tmp = upper_graph_height;
+                upper_graph_height = lower_graph_height;
+                lower_graph_height = tmp;
+            }
+
+            let upper_graph = Graph {
+                x_axis_label: None,
+                padding_bottom: 0,
+                skip_value: SkipValue::None,
+                plot_height: upper_graph_height,
+                y_max: Some(upper_y_max),
+                y_min: Some(upper_y_min),
+                ..self.clone()
+            }.draw();
+            let lower_graph = Graph {
+                padding_top: 0,
+                title: None,
+                y_axis_label: None,
+                skip_value: SkipValue::None,
+                plot_height: lower_graph_height,
+                y_max: Some(lower_y_max),
+                y_min: Some(lower_y_min),
+                ..self.clone()
+            }.draw();
+
+            let mut upper_graph = into_lines(&upper_graph);
+            upper_graph = upper_graph[0..(upper_graph.len() - 3)].to_vec();  // remove x axis
+            let mut lower_graph = into_lines(&lower_graph);
+            lower_graph = lower_graph[1..].to_vec();  // remove overflow characters
+            let line_width = upper_graph[0].len();
+
+            let result = vec![
+                upper_graph,
+                vec![
+                    vec!['~' as u16; line_width],
+                    vec!['~' as u16; line_width],
+                ],
+                lower_graph
+            ].concat().join(&['\n' as u16][..]);
+
+            return from_v16(&result);
+        }
+
+        let line_width = plot_width + self.y_label_max_len + self.padding_left + self.padding_right + 3;
+
+        let padding_top = draw_empty_lines(line_width, self.padding_top);
+        let padding_bottom = draw_empty_lines(line_width, self.padding_bottom);
+
         let mut y_grid_size = (y_max - y_min) / plot_height as i64;
 
         // an error from integer division made a problem
         if y_max - (plot_height - 1) as i64 * y_grid_size > data_min {
             y_grid_size += 1;
+
+            // but it must not cause an overflow
+            if y_max < i64::MIN + (plot_height as i64 + 1) * y_grid_size {
+                y_grid_size -= 1;
+            }
+
         }
 
         let mut result = vec![' ' as u16; line_width * (plot_height + 2)];
