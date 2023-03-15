@@ -44,15 +44,8 @@ pub fn sns_int(n: i64) -> String {
 
     else {
 
-        if n < 1_000 {
+        if n < 100_000 {
             n.to_string()
-        }
-
-        else if n < 10_000 {
-            let k =  n / 1000;
-            let sk = n / 10 % 100;
-
-            format!("{}.{:02}K", k, sk)
         }
 
         else if n < 1_000_000 {
@@ -66,6 +59,13 @@ pub fn sns_int(n: i64) -> String {
             format!("{}.{:02}M", m, sm)
         }
 
+        else if n < 100_000_000 {
+            let m =  n / 1_000_000;
+            let sm = n / 100_000 % 10;
+
+            format!("{}.{}M", m, sm)
+        }
+
         else if n < 1_000_000_000 {
             format!("{}M", n / 1_000_000)
         }
@@ -75,6 +75,13 @@ pub fn sns_int(n: i64) -> String {
             let sb = n / 10_000_000 % 100;
 
             format!("{}.{:02}B", b, sb)
+        }
+
+        else if n < 100_000_000_000 {
+            let b =  n / 1_000_000_000;
+            let sb = n / 100_000_000 % 10;
+
+            format!("{}.{}B", b, sb)
         }
 
         else if n < 1_000_000_000_000 {
@@ -88,6 +95,13 @@ pub fn sns_int(n: i64) -> String {
             format!("{}.{:02}T", t, st)
         }
 
+        else if n < 100_000_000_000_000 {
+            let t =  n / 1_000_000_000_000;
+            let st = n / 100_000_000_000 % 10;
+
+            format!("{}.{}T", t, st)
+        }
+
         else if n < 1_000_000_000_000_000 {
             format!("{}T", n / 1_000_000_000_000)
         }
@@ -98,6 +112,12 @@ pub fn sns_int(n: i64) -> String {
             format!("{}.{:02}Q", q, sq)
         }
 
+        else if n < 100_000_000_000_000_000 {
+            let q =  n / 1_000_000_000_000_000;
+            let sq = n / 100_000_000_000_000 % 10;
+            format!("{}.{}Q", q, sq)
+        }
+
         else {
             format!("{}Q", n / 1_000_000_000_000_000)
         }
@@ -106,6 +126,7 @@ pub fn sns_int(n: i64) -> String {
 
 }
 
+// .9999
 // 9.999
 // 99.99
 // 999
@@ -117,15 +138,27 @@ pub fn fractional_number(n: i64) -> String {
 
     else {
 
-        if n >= 409600 {
-            sns_int(n / 4096)
+        if n >= 16384_000 {
+            sns_int(n / 16384)
+        }
+
+        else if n < 16384 {
+            let fraction = n * 10000 / 16384;  // 0 ~ 9999
+
+            format!(".{:04}", fraction)
         }
 
         else {
-            let integer = n / 4096;
-            let mut fraction = n % 4096 * 1000 / 4096;  // 0 ~ 999
+            let integer = n / 16384;
+            let mut fraction = n % 16384 * 1000 / 16384;  // 0 ~ 999
 
-            if integer >= 10 {
+            if integer >= 100 {
+                fraction /= 100;  // 0 ~ 9
+
+                format!("{}.{}", integer, fraction)
+            }
+
+            else if integer >= 10 {
                 fraction /= 10;  // 0 ~ 99
 
                 format!("{}.{:02}", integer, fraction)

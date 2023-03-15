@@ -3,6 +3,12 @@ use crate::utils::{sns_int, fractional_number};
 
 impl Graph {
 
+    /// default: false
+    pub fn quiet(&mut self, quiet: bool) -> &mut Self {
+        self.quiet = quiet;
+        self
+    }
+
     pub fn set_title(&mut self, title: String) -> &mut Self {
         self.title = Some(title);
         self
@@ -18,16 +24,22 @@ impl Graph {
         self
     }
 
+    /// only for 1d graphs
+    /// default: '█'
     pub fn set_full_block_character(&mut self, full_block_character: u16) -> &mut Self {
         self.full_block_character = full_block_character;
         self
     }
 
+    /// only for 1d graphs
+    /// default: '▄'
     pub fn set_half_block_character(&mut self, half_block_character: u16) -> &mut Self {
         self.half_block_character = half_block_character;
         self
     }
 
+    /// only for 1d graphs
+    /// default: '^'
     pub fn set_overflow_character(&mut self, overflow_character: u16) -> &mut Self {
         self.overflow_character = overflow_character;
         self
@@ -81,7 +93,25 @@ impl Graph {
         self
     }
 
-    pub fn set_1d_data(&mut self, data: Vec<(String, i64)>) -> &mut Self {
+    pub fn set_1d_data(&mut self, data: Vec<i64>) -> &mut Self {
+
+        match self.block_width {
+            Some(n) => {
+                self.plot_width = data.len() * n;
+            }
+            _ => {}
+        }
+
+        self.data = GraphData::OneDimensional(
+            data.into_iter().enumerate().map(
+                |(ind, val)| (ind.to_string(), val)
+            ).collect()
+        );
+        self.y_label_formatter = sns_int;
+        self
+    }
+
+    pub fn set_1d_labeled_data(&mut self, data: Vec<(String, i64)>) -> &mut Self {
 
         match self.block_width {
             Some(n) => {
@@ -97,7 +127,25 @@ impl Graph {
 
     /// It uses fixed point numbers to represent real numbers. It uses 12 bits for the fractional parts.
     /// If you want another representation, you have to implement by yourself.
-    pub fn set_1d_data_float(&mut self, data: Vec<(String, f64)>) -> &mut Self {
+    pub fn set_1d_data_float(&mut self, data: Vec<f64>) -> &mut Self {
+
+        match self.block_width {
+            Some(n) => {
+                self.plot_width = data.len() * n;
+            }
+            _ => {}
+        }
+
+        self.data = GraphData::OneDimensional(
+            data.into_iter().enumerate().map(
+                |(ind, val)| (ind.to_string(), (val * 16384.0) as i64)
+            ).collect()
+        );
+        self.y_label_formatter = fractional_number;
+        self
+    }
+
+    pub fn set_1d_labeled_data_float(&mut self, data: Vec<(String, f64)>) -> &mut Self {
 
         match self.block_width {
             Some(n) => {
@@ -107,7 +155,7 @@ impl Graph {
         }
 
         self.data = GraphData::OneDimensional(data.into_iter().map(
-            |(s, n)| (s, (n * 4096.0) as i64)
+            |(s, n)| (s, (n * 16384.0) as i64)
         ).collect());
         self.y_label_formatter = fractional_number;
         self
@@ -131,13 +179,13 @@ impl Graph {
     }
 
     pub fn set_y_min_float(&mut self, y_min: f64) -> &mut Self {
-        self.y_min = Some((y_min * 4096.0) as i64);
+        self.y_min = Some((y_min * 16384.0) as i64);
         self.y_label_formatter = fractional_number;
         self
     }
 
     pub fn set_y_max_float(&mut self, y_max: f64) -> &mut Self {
-        self.y_max = Some((y_max * 4096.0) as i64);
+        self.y_max = Some((y_max * 16384.0) as i64);
         self.y_label_formatter = fractional_number;
         self
     }
@@ -179,9 +227,14 @@ impl Graph {
     }
 
     /// it does not plot data between this range.
-    /// it's applied only when the height of the plot is greater than 16
+    /// it's applied only when the height of the plot is greater than 18
     pub fn set_skip_values(&mut self, skip_value: SkipValue) -> &mut Self {
         self.skip_value = skip_value;
+        self
+    }
+
+    pub fn set_skip_values_float(&mut self, from: f64, to: f64) -> &mut Self {
+        self.skip_value = SkipValue::Range((from * (16384.0)) as i64, (to * (16384.0)) as i64);
         self
     }
 

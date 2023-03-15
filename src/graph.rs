@@ -31,6 +31,7 @@ use crate::utils::{into_v16, from_v16, right_align, sns_int, into_lines};
  */
 #[derive(Clone)]
 pub struct Graph {
+    quiet: bool,
     data: GraphData,
     title: Option<String>,
     x_label_interval: usize,
@@ -57,6 +58,9 @@ pub struct Graph {
     overflow_character: u16,
     /// only for 1d graphs
     y_label_formatter: fn(i64) -> String,
+
+    // it prevents y_label from hidden by `~` characters
+    y_label_interval_offset: usize,
 
     skip_value: SkipValue,
 
@@ -116,6 +120,7 @@ impl Graph {
     pub fn new(plot_width: usize, plot_height: usize) -> Self {
 
         Graph {
+            quiet: false,
             plot_width,
             plot_height,
             title: None,
@@ -132,6 +137,8 @@ impl Graph {
             padding_bottom: 0,
             padding_left: 0,
             padding_right: 0,
+
+            y_label_interval_offset: 0,
 
             skip_value: SkipValue::Auto,
             full_block_character: '█' as u16,
@@ -160,19 +167,19 @@ impl Graph {
         let mut plot_height = self.plot_height;
 
         if plot_width < 3 {
-            println!("Warning: `plot_width` is too small! it'll adjust the width...");
+            if !self.quiet { println!("Warning: `plot_width` is too small! it'll adjust the width..."); }
             plot_width = 3;
         }
 
         if plot_height < 3 {
-            println!("Warning: `plot_height` is too small! it'll adjust the height...");
+            if !self.quiet { println!("Warning: `plot_height` is too small! it'll adjust the height..."); }
             plot_height = 3;
         }
 
         if data.len() > plot_width * 8 {
 
             if plot_width % 2 == 1 {
-                println!("Warning: odd `plot_width` is not supported yet! it'll adjust the width...");
+                if !self.quiet { println!("Warning: odd `plot_width` is not supported yet! it'll adjust the width..."); }
                 plot_width += 1;
             }
 
@@ -209,7 +216,7 @@ impl Graph {
         }
 
         if let Some((skip_from, skip_to)) = match self.skip_value {
-            SkipValue::Auto if data.len() > 1 && plot_height > 16 => {
+            SkipValue::Auto if data.len() > 1 && plot_height > 18 => {
                 let mut max_diff = 0;
                 let mut suspicious = (0, 0);
 
@@ -232,7 +239,16 @@ impl Graph {
                 }
 
             }
-            SkipValue::Range(skip_from, skip_to) if plot_height > 16 => Some((skip_from, skip_to)),
+            SkipValue::Range(skip_from, skip_to) if data.len() > 1 && plot_height > 18 => if skip_from < data_min || skip_to > data_max || skip_from >= skip_to {
+                if !self.quiet {
+                    println!(
+                        "Warning: SkipValue::Range({skip_from}, {skip_to}) is invalid!\n`skip_from >= data_min && skip_to <= data_max && skip_from < skip_to` must hold but skip_from: {skip_from}, skip_to: {skip_to}, data_min: {data_min}, data_max: {data_max}"
+                    );
+                }
+                None
+            } else {
+                Some((skip_from, skip_to))
+            },
             _ => None
         } {
             let upper_y_max = if let Some(n) = self.y_max { n } else if data_max > i64::MAX - (data_max - skip_to) / 8 {
@@ -266,6 +282,7 @@ impl Graph {
                 plot_height: upper_graph_height,
                 y_max: Some(upper_y_max),
                 y_min: Some(upper_y_min),
+                data: GraphData::OneDimensional(data.clone()),
                 ..self.clone()
             }.draw();
             let lower_graph = Graph {
@@ -274,8 +291,10 @@ impl Graph {
                 y_axis_label: None,
                 skip_value: SkipValue::None,
                 plot_height: lower_graph_height,
+                y_label_interval_offset: 1,
                 y_max: Some(lower_y_max),
                 y_min: Some(lower_y_min),
+                data: GraphData::OneDimensional(data),
                 ..self.clone()
             }.draw();
 
@@ -323,7 +342,7 @@ impl Graph {
             if y < plot_height {
                 result[y * line_width + self.y_label_max_len + 1 + self.padding_left] = '|' as u16;
 
-                if y % self.y_label_interval == 0 {
+                if y % self.y_label_interval == self.y_label_interval_offset {
                     let ylabel = into_v16(&right_align((self.y_label_formatter)(y_max - y as i64 * y_grid_size), self.y_label_max_len));
 
                     for x in 0..ylabel.len() {
