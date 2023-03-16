@@ -342,7 +342,7 @@ impl Graph {
             if y < plot_height {
                 result[y * line_width + self.y_label_max_len + 1 + self.padding_left] = '|' as u16;
 
-                if y % self.y_label_interval == self.y_label_interval_offset {
+                if y % self.y_label_interval == self.y_label_interval_offset || self.y_label_interval == 1 {
                     let ylabel = into_v16(&right_align((self.y_label_formatter)(y_max - y as i64 * y_grid_size), self.y_label_max_len));
 
                     for x in 0..ylabel.len() {

@@ -1,7 +1,7 @@
-mod graph;
-mod utils;
-mod merge;
 mod format;
+mod graph;
+mod merge;
+mod utils;
 
 /// It assumes a korean character (한글) consumes 2 spaces.
 /// For real numbers, it uses fixed point numbers. (14 bits for fractional parts)
