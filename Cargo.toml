@@ -1,6 +1,6 @@
 [package]
 name = "asciigraph"
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 description = "Ascii Graph"
 license = "MIT"
