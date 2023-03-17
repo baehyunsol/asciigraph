@@ -1,6 +1,6 @@
 mod setters;
 
-use crate::utils::{into_v16, from_v16, right_align, sns_int, into_lines};
+use crate::utils::{into_v16, from_v16, right_align, sns_int, into_lines, from_lines};
 
 // All the strings returned by `Graph::draw()`, `merge_vert()` and `merge_horiz()` must be rectangles
 
@@ -304,16 +304,16 @@ impl Graph {
             lower_graph = lower_graph[1..].to_vec();  // remove overflow characters
             let line_width = upper_graph[0].len();
 
-            let result = vec![
+            let lines = vec![
                 upper_graph,
                 vec![
                     vec!['~' as u16; line_width],
                     vec!['~' as u16; line_width],
                 ],
                 lower_graph
-            ].concat().join(&['\n' as u16][..]);
+            ].concat();
 
-            return from_v16(&result);
+            return from_lines(&lines);
         }
 
         let line_width = plot_width + self.y_label_max_len + self.padding_left + self.padding_right + 3;

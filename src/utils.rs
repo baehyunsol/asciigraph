@@ -181,3 +181,7 @@ pub fn into_lines(string: &String) -> Vec<Vec<u16>> {
         |line| line.to_vec()
     ).collect()
 }
+
+pub fn from_lines(lines: &Vec<Vec<u16>>) -> String {
+    from_v16(&lines.join(&['\n' as u16][..]))
+}

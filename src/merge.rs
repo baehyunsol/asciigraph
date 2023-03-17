@@ -1,4 +1,4 @@
-use crate::utils::{from_v16, into_lines};
+use crate::utils::{into_lines, from_lines};
 
 /// merge 2 graphs with this function
 pub fn merge_vert(str1: &String, str2: &String, margin: usize, alignment: Alignment) -> String {
@@ -62,13 +62,13 @@ pub fn merge_vert(str1: &String, str2: &String, margin: usize, alignment: Alignm
         ].concat();
     }
 
-    let v16 = vec![
+    let lines = vec![
         lines1,
         vec![vec![' ' as u16; line_width]; margin],
         lines2
-    ].concat().join(&['\n' as u16][..]);
+    ].concat();
 
-    from_v16(&v16)
+    from_lines(&lines)
 }
 
 /// merge 2 graphs with this function
@@ -86,16 +86,16 @@ pub fn merge_horiz(str1: &String, str2: &String, margin: usize) -> String {
     let lines2 = into_lines(str2);
 
     if lines1.len() == lines2.len() {
-        from_v16(&(0..lines1.len()).map(
+        from_lines(&(0..lines1.len()).map(
             |i|
             vec![lines1[i].clone(), vec![' ' as u16; margin], lines2[i].clone()].concat()
-        ).collect::<Vec<Vec<u16>>>().join(&['\n' as u16][..]))
+        ).collect())
     }
 
     else if lines1.len() < lines2.len() {
         let line1_width = lines1[0].len();
         let height_diff = lines2.len() - lines1.len();
-        let result = vec![
+        let lines = vec![
             (0..height_diff).map(
                 |i|
                 vec![vec![' ' as u16; margin + line1_width], lines2[i].clone()].concat()
@@ -103,16 +103,16 @@ pub fn merge_horiz(str1: &String, str2: &String, margin: usize) -> String {
             (height_diff..lines2.len()).map(
                 |i|
                 vec![lines1[i - height_diff].clone(), vec![' ' as u16; margin], lines2[i].clone()].concat()
-            ).collect::<Vec<Vec<u16>>>()
-        ].concat().join(&['\n' as u16][..]);
+            ).collect()
+        ].concat();
 
-        from_v16(&result)
+        from_lines(&lines)
     }
 
     else {
         let line2_width = lines2[0].len();
         let height_diff = lines1.len() - lines2.len();
-        let result = vec![
+        let lines = vec![
             (0..height_diff).map(
                 |i|
                 vec![lines1[i].clone(), vec![' ' as u16; margin + line2_width]].concat()
@@ -121,9 +121,9 @@ pub fn merge_horiz(str1: &String, str2: &String, margin: usize) -> String {
                 |i|
                 vec![lines1[i].clone(), vec![' ' as u16; margin], lines2[i - height_diff].clone()].concat()
             ).collect::<Vec<Vec<u16>>>()
-        ].concat().join(&['\n' as u16][..]);
+        ].concat();
 
-        from_v16(&result)
+        from_lines(&lines)
     }
 
 }

@@ -1,5 +1,5 @@
 use crate::merge::Alignment;
-use crate::utils::{into_lines, from_v16};
+use crate::utils::{into_lines, from_lines};
 
 /// It doesn't break lines automatically; you have to break them using '\n' characters.
 /// If there's a line who's longer than `width`, it wouldn't work. You have to take care of that.
@@ -36,5 +36,5 @@ pub fn format_lines(string: &String, width: usize, alignment: Alignment) -> Stri
         ].concat();
     }
 
-    from_v16(&lines.join(&['\n' as u16][..]))
+    from_lines(&lines)
 }
