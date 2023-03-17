@@ -14,6 +14,11 @@ impl Graph {
         self
     }
 
+    pub fn set_big_title(&mut self, big_title: bool) -> &mut Self {
+        self.big_title = big_title;
+        self
+    }
+
     pub fn set_x_axis_label(&mut self, x_axis_label: String) -> &mut Self {
         self.x_axis_label = Some(x_axis_label);
         self

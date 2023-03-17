@@ -1,6 +1,8 @@
 mod setters;
 
 use crate::utils::{into_v16, from_v16, right_align, sns_int, into_lines, from_lines};
+use crate::format::format_lines;
+use crate::merge::Alignment;
 
 // All the strings returned by `Graph::draw()`, `merge_vert()` and `merge_horiz()` must be rectangles
 
@@ -34,6 +36,7 @@ pub struct Graph {
     quiet: bool,
     data: GraphData,
     title: Option<String>,
+    big_title: bool,
     x_label_interval: usize,
     y_label_interval: usize,
     y_label_max_len: usize,
@@ -59,7 +62,7 @@ pub struct Graph {
     /// only for 1d graphs
     y_label_formatter: fn(i64) -> String,
 
-    // it prevents y_label from hidden by `~` characters
+    // it prevents y_label from being hidden by `~` characters
     y_label_interval_offset: usize,
 
     skip_value: SkipValue,
@@ -92,7 +95,7 @@ impl GraphData {
     fn unwrap_1d(&self) -> Vec<(String, i64)> {
         match self {
             GraphData::OneDimensional(d) => d.clone(),
-            _ => panic!("called `GraphData::unwrap_1d()` on a `{self:?}` value")
+            _ => panic!("called `GraphData::unwrap_1d()` on `{self:?}`")
         }
     }
 
@@ -101,7 +104,7 @@ impl GraphData {
             GraphData::TwoDimensional { data, x_labels, y_labels } => (
                 x_labels.to_vec(), y_labels.to_vec(), data.to_vec()
             ),
-            _ => panic!("called `GraphData::unwrap_2d()` on a `{self:?}` value")
+            _ => panic!("called `GraphData::unwrap_2d()` on `{self:?}`")
         }
     }
 
@@ -124,6 +127,7 @@ impl Graph {
             plot_width,
             plot_height,
             title: None,
+            big_title: false,
             x_label_interval: 8,
             y_label_interval: 3,
             y_label_max_len: 6,
@@ -302,13 +306,19 @@ impl Graph {
             upper_graph = upper_graph[0..(upper_graph.len() - 3)].to_vec();  // remove x axis
             let mut lower_graph = into_lines(&lower_graph);
             lower_graph = lower_graph[1..].to_vec();  // remove overflow characters
-            let line_width = upper_graph[0].len();
+            let line_width = lower_graph[0].len();
+
+            let line_breaker = vec![
+                vec![' ' as u16; self.padding_left],
+                vec!['~' as u16; line_width - self.padding_left - self.padding_right],
+                vec![' ' as u16; self.padding_right]
+            ].concat();
 
             let lines = vec![
                 upper_graph,
                 vec![
-                    vec!['~' as u16; line_width],
-                    vec!['~' as u16; line_width],
+                    line_breaker.clone(),
+                    line_breaker,
                 ],
                 lower_graph
             ].concat();
@@ -495,16 +505,16 @@ impl Graph {
                 let mut line = vec![' ' as u16; line_width];
                 line[line_width - 1] = '\n' as u16;
 
-                let mut title = into_v16(&l);
-                let title_begin_x = if title.len() + padding_right > line_width {
-                    title = title[0..(line_width - padding_right - 1)].to_vec();
+                let mut label = into_v16(&l);
+                let label_begin_x = if label.len() + padding_right > line_width {
+                    label = label[0..(line_width - padding_right - 1)].to_vec();
                     0
                 } else {
-                    line_width - padding_right - title.len() - 1
+                    line_width - padding_right - label.len() - 1
                 };
         
-                for (i, c) in title.into_iter().enumerate() {
-                    line[title_begin_x + i] = c;
+                for (i, c) in label.into_iter().enumerate() {
+                    line[label_begin_x + i] = c;
                 }
 
                 line
@@ -519,13 +529,13 @@ impl Graph {
                 let mut line = vec![' ' as u16; line_width];
                 line[line_width - 1] = '\n' as u16;
 
-                let mut title = into_v16(&l);
+                let mut label = into_v16(&l);
 
-                if title.len() + padding_left + y_label_max_len >= line_width {
-                    title = title[0..(line_width - padding_left - y_label_max_len)].to_vec();
+                if label.len() + padding_left + y_label_max_len >= line_width {
+                    label = label[0..(line_width - padding_left - y_label_max_len)].to_vec();
                 }
 
-                for (i, c) in title.into_iter().enumerate() {
+                for (i, c) in label.into_iter().enumerate() {
                     line[i + padding_left + y_label_max_len] = c;
                 }
 
@@ -538,21 +548,20 @@ impl Graph {
     fn draw_title_line(&self, line_width: usize, padding_left: usize, padding_right: usize) -> Vec<u16> {
         match &self.title {
             Some(t) => {
-                let mut line = vec![' ' as u16; line_width];
-                line[line_width - 1] = '\n' as u16;
-
-                let title = into_v16(&t);
-                let title_begin_x = if title.len() > line_width {
-                    0
+                let mut title = if self.big_title {
+                    asciibox::render_string(t, asciibox::RenderOption::default())
                 } else {
-                    (line_width - padding_left - padding_right - title.len()) / 2
+                    t.to_string()
                 };
-        
-                for (i, c) in title.into_iter().enumerate() {
-                    line[title_begin_x + i + padding_left] = c;
-                }
 
-                line
+                title = format_lines(&title, line_width - padding_left - padding_right, Alignment::Center);
+                title = format_lines(&title, line_width - padding_left, Alignment::Left);
+                title = format_lines(&title, line_width, Alignment::Right);
+
+                let mut result = into_v16(&title);
+                result.push('\n' as u16);
+
+                result
             }
             _ => vec![]
         }

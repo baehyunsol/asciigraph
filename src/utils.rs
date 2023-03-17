@@ -142,12 +142,6 @@ pub fn fractional_number(n: i64) -> String {
             sns_int(n / 16384)
         }
 
-        else if n < 16384 {
-            let fraction = n * 10000 / 16384;  // 0 ~ 9999
-
-            format!(".{:04}", fraction)
-        }
-
         else {
             let integer = n / 16384;
             let mut fraction = n % 16384 * 1000 / 16384;  // 0 ~ 999
