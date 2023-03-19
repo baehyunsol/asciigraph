@@ -454,9 +454,9 @@ impl Graph {
         result = vec![
             draw_empty_lines(line_width, self.padding_top),
             self.draw_title_line(line_width, self.padding_left, self.padding_right),
-            self.draw_y_axis_label(line_width, self.padding_left, self.y_label_max_len),
+            self.draw_y_axis_label(line_width - 1, self.padding_left, self.y_label_max_len),
             result,
-            self.draw_x_axis_label(line_width, self.padding_right),
+            self.draw_x_axis_label(line_width - 1, self.padding_right),
             draw_empty_lines(line_width, self.padding_bottom)
         ].concat();
 
@@ -470,9 +470,6 @@ impl Graph {
         assert_eq!(self.plot_height, y_labels.len());
 
         let line_width = self.plot_width + self.y_label_max_len + 3 + self.padding_left + self.padding_right;
-
-        let padding_top = draw_empty_lines(line_width, self.padding_top);
-        let padding_bottom = draw_empty_lines(line_width, self.padding_bottom);
 
         let mut result = vec![' ' as u16; line_width * (self.plot_height + 2)];
 
@@ -528,12 +525,12 @@ impl Graph {
         }
 
         result = vec![
-            padding_top,
+            draw_empty_lines(line_width, self.padding_top),
             self.draw_title_line(line_width, self.padding_left, self.padding_right),
-            self.draw_y_axis_label(line_width, self.padding_left, self.y_label_max_len),
+            self.draw_y_axis_label(line_width - 1, self.padding_left, self.y_label_max_len),
             result,
-            self.draw_x_axis_label(line_width, self.padding_right),
-            padding_bottom
+            self.draw_x_axis_label(line_width - 1, self.padding_right),
+            draw_empty_lines(line_width, self.padding_bottom)
         ].concat();
 
         from_v16(&result)
@@ -542,22 +539,13 @@ impl Graph {
     fn draw_x_axis_label(&self, line_width: usize, padding_right: usize) -> Vec<u16> {
         match &self.x_axis_label {
             Some(l) => {
-                let mut line = vec![' ' as u16; line_width];
-                line[line_width - 1] = '\n' as u16;
+                let mut label = l.to_string();
 
-                let mut label = into_v16(&l);
-                let label_begin_x = if label.len() + padding_right > line_width {
-                    label = label[0..(line_width - padding_right - 1)].to_vec();
-                    0
-                } else {
-                    line_width - padding_right - label.len() - 1
-                };
-        
-                for (i, c) in label.into_iter().enumerate() {
-                    line[label_begin_x + i] = c;
-                }
-
-                line
+                label = format_lines(&label, line_width - padding_right, Alignment::Right);
+                label = format_lines(&label, line_width, Alignment::Left);
+                let mut result = into_v16(&label);
+                result.push('\n' as u16);
+                result
             }
             None => vec![]
         }
@@ -566,20 +554,13 @@ impl Graph {
     fn draw_y_axis_label(&self, line_width: usize, padding_left: usize, y_label_max_len: usize) -> Vec<u16> {
         match &self.y_axis_label {
             Some(l) => {
-                let mut line = vec![' ' as u16; line_width];
-                line[line_width - 1] = '\n' as u16;
+                let mut label = l.to_string();
 
-                let mut label = into_v16(&l);
-
-                if label.len() + padding_left + y_label_max_len >= line_width {
-                    label = label[0..(line_width - padding_left - y_label_max_len)].to_vec();
-                }
-
-                for (i, c) in label.into_iter().enumerate() {
-                    line[i + padding_left + y_label_max_len] = c;
-                }
-
-                line
+                label = format_lines(&label, line_width - padding_left - y_label_max_len, Alignment::Left);
+                label = format_lines(&label, line_width, Alignment::Right);
+                let mut result = into_v16(&label);
+                result.push('\n' as u16);
+                result
             }
             None => vec![]
         }
