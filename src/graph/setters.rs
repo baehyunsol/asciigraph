@@ -1,5 +1,4 @@
-use super::{Graph, GraphData, SkipValue};
-use crate::utils::{sns_int, fractional_number};
+use super::{Graph, GraphData, SkipValue, NumberMode};
 
 impl Graph {
 
@@ -93,12 +92,11 @@ impl Graph {
         self
     }
 
-    pub fn set_y_label_formatter(&mut self, y_label_formatter: fn(i64) -> String) -> &mut Self {
-        self.y_label_formatter = y_label_formatter;
-        self
-    }
-
     pub fn set_1d_data(&mut self, data: Vec<i64>) -> &mut Self {
+
+        if self.number_mode == NumberMode::Real {
+            println!("Warning!! You're using mixed number modes!!");
+        }
 
         match self.block_width {
             Some(n) => {
@@ -112,11 +110,15 @@ impl Graph {
                 |(ind, val)| (ind.to_string(), val)
             ).collect()
         );
-        self.y_label_formatter = sns_int;
+        self.number_mode = NumberMode::Integer;
         self
     }
 
     pub fn set_1d_labeled_data(&mut self, data: Vec<(String, i64)>) -> &mut Self {
+
+        if self.number_mode == NumberMode::Real {
+            println!("Warning!! You're using mixed number modes!!");
+        }
 
         match self.block_width {
             Some(n) => {
@@ -126,13 +128,17 @@ impl Graph {
         }
 
         self.data = GraphData::OneDimensional(data);
-        self.y_label_formatter = sns_int;
+        self.number_mode = NumberMode::Integer;
         self
     }
 
     /// It uses fixed point numbers to represent real numbers. It uses 12 bits for the fractional parts.
     /// If you want another representation, you have to implement by yourself.
     pub fn set_1d_data_float(&mut self, data: Vec<f64>) -> &mut Self {
+
+        if self.number_mode == NumberMode::Integer {
+            println!("Warning!! You're using mixed number modes!!");
+        }
 
         match self.block_width {
             Some(n) => {
@@ -146,11 +152,15 @@ impl Graph {
                 |(ind, val)| (ind.to_string(), (val * 16384.0) as i64)
             ).collect()
         );
-        self.y_label_formatter = fractional_number;
+        self.number_mode = NumberMode::Real;
         self
     }
 
     pub fn set_1d_labeled_data_float(&mut self, data: Vec<(String, f64)>) -> &mut Self {
+
+        if self.number_mode == NumberMode::Integer {
+            println!("Warning!! You're using mixed number modes!!");
+        }
 
         match self.block_width {
             Some(n) => {
@@ -162,7 +172,7 @@ impl Graph {
         self.data = GraphData::OneDimensional(data.into_iter().map(
             |(s, n)| (s, (n * 16384.0) as i64)
         ).collect());
-        self.y_label_formatter = fractional_number;
+        self.number_mode = NumberMode::Real;
         self
     }
 
@@ -172,26 +182,46 @@ impl Graph {
     }
 
     pub fn set_y_min(&mut self, y_min: i64) -> &mut Self {
+
+        if self.number_mode == NumberMode::Real {
+            println!("Warning!! You're using mixed number modes!!");
+        }
+
         self.y_min = Some(y_min);
-        self.y_label_formatter = sns_int;
+        self.number_mode = NumberMode::Integer;
         self
     }
 
     pub fn set_y_max(&mut self, y_max: i64) -> &mut Self {
+
+        if self.number_mode == NumberMode::Real {
+            println!("Warning!! You're using mixed number modes!!");
+        }
+
         self.y_max = Some(y_max);
-        self.y_label_formatter = sns_int;
+        self.number_mode = NumberMode::Integer;
         self
     }
 
     pub fn set_y_min_float(&mut self, y_min: f64) -> &mut Self {
+
+        if self.number_mode == NumberMode::Integer {
+            println!("Warning!! You're using mixed number modes!!");
+        }
+
         self.y_min = Some((y_min * 16384.0) as i64);
-        self.y_label_formatter = fractional_number;
+        self.number_mode = NumberMode::Real;
         self
     }
 
     pub fn set_y_max_float(&mut self, y_max: f64) -> &mut Self {
+
+        if self.number_mode == NumberMode::Integer {
+            println!("Warning!! You're using mixed number modes!!");
+        }
+
         self.y_max = Some((y_max * 16384.0) as i64);
-        self.y_label_formatter = fractional_number;
+        self.number_mode = NumberMode::Real;
         self
     }
 
@@ -226,20 +256,50 @@ impl Graph {
     }
 
     pub fn set_y_range(&mut self, y_min: i64, y_max: i64) -> &mut Self {
+
+        if self.number_mode == NumberMode::Real {
+            println!("Warning!! You're using mixed number modes!!");
+        }
+
         self.y_min = Some(y_min);
         self.y_max = Some(y_max);
+        self.number_mode = NumberMode::Integer;
+        self
+    }
+
+    pub fn set_y_range_float(&mut self, y_min: f64, y_max: f64) -> &mut Self {
+
+        if self.number_mode == NumberMode::Integer {
+            println!("Warning!! You're using mixed number modes!!");
+        }
+
+        self.y_min = Some((y_min * 16384.0) as i64);
+        self.y_max = Some((y_max * 16384.0) as i64);
+        self.number_mode = NumberMode::Real;
         self
     }
 
     /// it does not plot data between this range.
     /// it's applied only when the height of the plot is greater than 18
     pub fn set_skip_values(&mut self, skip_value: SkipValue) -> &mut Self {
+
+        if self.number_mode == NumberMode::Real {
+            println!("Warning!! You're using mixed number modes!!");
+        }
+
         self.skip_value = skip_value;
+        self.number_mode = NumberMode::Integer;
         self
     }
 
     pub fn set_skip_values_float(&mut self, from: f64, to: f64) -> &mut Self {
+
+        if self.number_mode == NumberMode::Integer {
+            println!("Warning!! You're using mixed number modes!!");
+        }
+
         self.skip_value = SkipValue::Range((from * (16384.0)) as i64, (to * (16384.0)) as i64);
+        self.number_mode = NumberMode::Real;
         self
     }
 

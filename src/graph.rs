@@ -1,6 +1,6 @@
 mod setters;
 
-use crate::utils::{into_v16, from_v16, right_align, sns_int, into_lines, from_lines};
+use crate::utils::{into_v16, from_v16, right_align, sns_int, into_lines, from_lines, fractional_number};
 use crate::format::format_lines;
 use crate::merge::Alignment;
 
@@ -48,6 +48,9 @@ pub struct Graph {
     x_axis_label: Option<String>,
     y_axis_label: Option<String>,
 
+    // used only internally
+    number_mode: NumberMode,
+
     padding_top: usize,
     padding_bottom: usize,
     padding_left: usize,
@@ -59,8 +62,6 @@ pub struct Graph {
     half_block_character: u16,
     /// only for 1d graphs
     overflow_character: u16,
-    /// only for 1d graphs
-    y_label_formatter: fn(i64) -> String,
 
     // it prevents y_label from being hidden by `~` characters
     y_label_interval_offset: usize,
@@ -88,6 +89,13 @@ pub enum SkipValue {
     None,
     Auto,
     Range(i64, i64)
+}
+
+#[derive(Clone, PartialEq)]
+enum NumberMode {
+    NotSet,
+    Integer,
+    Real,
 }
 
 impl GraphData {
@@ -137,6 +145,8 @@ impl Graph {
             x_axis_label: None,
             y_axis_label: None,
 
+            number_mode: NumberMode::NotSet,
+
             padding_top: 0,
             padding_bottom: 0,
             padding_left: 0,
@@ -148,7 +158,6 @@ impl Graph {
             full_block_character: '█' as u16,
             half_block_character: '▄' as u16,
             overflow_character: '^' as u16,
-            y_label_formatter: sns_int,
             y_max: None,
             y_min: None,
             data: GraphData::None
@@ -170,6 +179,12 @@ impl Graph {
         let mut plot_width = self.plot_width;
         let mut plot_height = self.plot_height;
 
+        let y_label_formatter = match self.number_mode {
+            NumberMode::Real => fractional_number,
+            NumberMode::Integer => sns_int,
+            _ => unreachable!()
+        };
+
         if plot_width < 3 {
             if !self.quiet { println!("Warning: `plot_width` is too small! it'll adjust the width..."); }
             plot_width = 3;
@@ -180,7 +195,7 @@ impl Graph {
             plot_height = 3;
         }
 
-        if data.len() > plot_width * 8 {
+        if data.len() > plot_width * 4 {
 
             if plot_width % 2 == 1 {
                 if !self.quiet { println!("Warning: odd `plot_width` is not supported yet! it'll adjust the width..."); }
@@ -195,6 +210,34 @@ impl Graph {
 
         let data_max = if data.len() > 0 { data_sorted[data.len() - 1].1 } else { 0 };
         let data_min = if data.len() > 0 { data_sorted[0].1 } else { 0 };
+
+        if data_max != data_min && self.number_mode == NumberMode::Integer && (data_max - data_min) < plot_width as i64 / 4 {
+            let mut new_graph = Graph {
+                data: GraphData::OneDimensional(
+                    data.into_iter().map(
+                        |(label, val)|
+                        (label, val * 16384)
+                    ).collect()
+                ),
+                ..self.clone()
+            };
+
+            if let Some(n) = new_graph.y_min {
+                new_graph.y_min = Some(n * 16384);
+            }
+
+            if let Some(n) = new_graph.y_max {
+                new_graph.y_max = Some(n * 16384);
+            }
+
+            if let SkipValue::Range(a, b) = new_graph.skip_value {
+                new_graph.skip_value = SkipValue::Range(a * 16384, b * 16384);
+            }
+
+            new_graph.number_mode = NumberMode::Real;
+
+            return new_graph.draw();
+        }
 
         let graph_margin = (data_max - data_min) / 8 + 1;
         let mut y_max = if let Some(n) = self.y_max { n } else if data_max < i64::MAX - graph_margin { data_max + graph_margin } else { data_max };
@@ -328,9 +371,6 @@ impl Graph {
 
         let line_width = plot_width + self.y_label_max_len + self.padding_left + self.padding_right + 3;
 
-        let padding_top = draw_empty_lines(line_width, self.padding_top);
-        let padding_bottom = draw_empty_lines(line_width, self.padding_bottom);
-
         let mut y_grid_size = (y_max - y_min) / plot_height as i64;
 
         // an error from integer division made a problem
@@ -353,7 +393,7 @@ impl Graph {
                 result[y * line_width + self.y_label_max_len + 1 + self.padding_left] = '|' as u16;
 
                 if y % self.y_label_interval == self.y_label_interval_offset || self.y_label_interval == 1 {
-                    let ylabel = into_v16(&right_align((self.y_label_formatter)(y_max - y as i64 * y_grid_size), self.y_label_max_len));
+                    let ylabel = into_v16(&right_align((y_label_formatter)(y_max - y as i64 * y_grid_size), self.y_label_max_len));
 
                     for x in 0..ylabel.len() {
                         result[y * line_width + x + self.padding_left] = ylabel[x];
@@ -412,12 +452,12 @@ impl Graph {
         }
 
         result = vec![
-            padding_top,
+            draw_empty_lines(line_width, self.padding_top),
             self.draw_title_line(line_width, self.padding_left, self.padding_right),
             self.draw_y_axis_label(line_width, self.padding_left, self.y_label_max_len),
             result,
             self.draw_x_axis_label(line_width, self.padding_right),
-            padding_bottom
+            draw_empty_lines(line_width, self.padding_bottom)
         ].concat();
 
         from_v16(&result)
