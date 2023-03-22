@@ -78,7 +78,7 @@ impl Graph {
     }
 
     pub fn set_y_label_max_len(&mut self, y_label_max_len: usize) -> &mut Self {
-        self.y_label_max_len = y_label_max_len;
+        self.y_label_max_len = Some(y_label_max_len);
         self
     }
 
