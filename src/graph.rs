@@ -7,6 +7,8 @@ use crate::skip_value::SkipValue;
 mod merge;
 mod setters;
 
+pub use merge::*;
+
 #[derive(Clone)]
 pub struct Graph {
     data: GraphData,

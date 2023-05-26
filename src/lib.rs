@@ -14,3 +14,5 @@ pub use graph::Graph;
 pub use convert::IntoRatio;
 pub use alignment::Alignment;
 pub use skip_value::SkipValue;
+
+pub use graph::{merge_horiz, merge_vert};
