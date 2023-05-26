@@ -1,127 +1,63 @@
+use hmath::Ratio;
+use crate::alignment::Alignment;
+use crate::lines::Lines;
+use crate::format::format_ratio;
+use crate::skip_value::SkipValue;
+
+mod merge;
 mod setters;
 
-use crate::utils::{into_v16, from_v16, right_align, into_lines, from_lines};
-use crate::format::{format_lines, sns_int, fractional_number, calc_fractional_number_max_len, calc_sns_int_max_len};
-use crate::merge::Alignment;
-
-// All the strings returned by `Graph::draw()`, `merge_vert()` and `merge_horiz()` must be rectangles
-
-/*
- * ascii art on (width + y_label_len + 3) * (height + 3)
- * without title, it's (width + y_label_len + 3) * (height + 2)
- *
- *  pppppppppppppppppppppppppn
- *  p         title         pn
- *  pccc                    pn
- *  paaaybbbbbbbbbbbbbbbbbbbpn
- *  paaaybbbbbbbbbbbbbbbbbbbpn
- *  paaaybbbbbbbbbbbbbbbbbbbpn
- *  paaaybbbbbbbbbbbbbbbbbbbpn
- *  paaayxxxxxxxxxxxxxxxxxxxpn
- *  p   ddddddddddddddddddddpn
- *  p                    eeepn
- *  pppppppppppppppppppppppppn
- * p: paddings
- * a, d: labels
- * x, y: borders
- * n: newline characters
- * c: y axis label
- * e: x axis label
- * b: plot
- * title: (width + y_label_len + 3) * 1, a: y_label_len * (height + 1), y: 2 * (height + 1), b: width * height
- * x: width * 1, d: (width + 1) * 1, n: 1 * (height + 2)
- */
-#[derive(Clone)]
 pub struct Graph {
-    quiet: bool,
     data: GraphData,
+
     title: Option<String>,
     big_title: bool,
-    x_label_interval: usize,
-    y_label_interval: usize,
-    y_label_max_len: Option<usize>,
+
     plot_width: usize,
     plot_height: usize,
 
     block_width: Option<usize>,
 
+    y_label_interval: usize,
+
     x_axis_label: Option<String>,
     y_axis_label: Option<String>,
 
-    // used only internally
-    number_mode: NumberMode,
-
-    padding_top: usize,
-    padding_bottom: usize,
-    padding_left: usize,
-    padding_right: usize,
-
-    /// only for 1d graphs
-    full_block_character: u16,
-    /// only for 1d graphs
-    half_block_character: u16,
-    /// only for 1d graphs
-    overflow_character: u16,
-
-    // it prevents y_label from being hidden by `~` characters
-    y_label_interval_offset: usize,
+    y_min: Option<Ratio>,
+    y_max: Option<Ratio>,
 
     skip_value: SkipValue,
 
-    // if None, the range is set automatically
-    y_min: Option<i64>,
-    y_max: Option<i64>
+    paddings: [usize; 4],
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Debug, PartialEq)]
 enum GraphData {
-    OneDimensional(Vec<(String, i64)>),  // Vec<(XLabel, Data)>
-    TwoDimensional {
+    Data1D (Vec<(String, Ratio)>),
+    Data2D {
+        data: Vec<(usize, usize, u16)>,
         x_labels: Vec<Option<String>>,
         y_labels: Vec<Option<String>>,
-        data: Vec<(usize, usize, u16)>
     },
     None
 }
 
-#[derive(Clone)]
-pub enum SkipValue {
-    None,
-    Auto,
-    Range(i64, i64)
-}
-
-#[derive(Clone, PartialEq)]
-enum NumberMode {
-    NotSet,
-    Integer,
-    Real,
-}
-
 impl GraphData {
 
-    fn unwrap_1d(&self) -> Vec<(String, i64)> {
-        match self {
-            GraphData::OneDimensional(d) => d.clone(),
-            _ => panic!("called `GraphData::unwrap_1d()` on `{self:?}`")
+    pub fn unwrap_1d(&self) -> &Vec<(String, Ratio)> {
+        if let GraphData::Data1D(v) = self {
+            v
+        } else {
+            panic!("Unable to unwrap 1d data from {self:?}")
         }
     }
 
-    fn unwrap_2d(&self) -> (Vec<Option<String>>, Vec<Option<String>>, Vec<(usize, usize, u16)>) {
-        match self {
-            GraphData::TwoDimensional { data, x_labels, y_labels } => (
-                x_labels.to_vec(), y_labels.to_vec(), data.to_vec()
-            ),
-            _ => panic!("called `GraphData::unwrap_2d()` on `{self:?}`")
+    pub fn unwrap_2d(&self) -> ( &Vec<(usize, usize, u16)>, &Vec<Option<String>>, &Vec<Option<String>> ) {
+        if let GraphData::Data2D { data, x_labels, y_labels } = self {
+            (&data, &x_labels, &y_labels)
+        } else {
+            panic!("Unable to unwrap 2d data from {self:?}")
         }
-    }
-
-}
-
-impl Default for Graph {
-
-    fn default() -> Graph {
-        Graph::new(48, 24)
     }
 
 }
@@ -129,579 +65,218 @@ impl Default for Graph {
 impl Graph {
 
     pub fn new(plot_width: usize, plot_height: usize) -> Self {
-
         Graph {
-            quiet: false,
             plot_width,
             plot_height,
-            title: None,
-            big_title: false,
-            x_label_interval: 8,
-            y_label_interval: 3,
-            y_label_max_len: None,
-
-            block_width: None,
-
-            x_axis_label: None,
-            y_axis_label: None,
-
-            number_mode: NumberMode::NotSet,
-
-            padding_top: 0,
-            padding_bottom: 0,
-            padding_left: 0,
-            padding_right: 0,
-
-            y_label_interval_offset: 0,
-
-            skip_value: SkipValue::Auto,
-            full_block_character: '█' as u16,
-            half_block_character: '▄' as u16,
-            overflow_character: '^' as u16,
-            y_max: None,
-            y_min: None,
-            data: GraphData::None
+            ..Default::default()
         }
     }
 
-    /// it panics when any of data is invalid (eg: `y_min` is greater than `y_max`)
-    /// use `.is_valid()` method to see if everything is fine
+    /// It panics if it's not well-configured. If you're not sure, try `.is_valid` before calling this method
     pub fn draw(&self) -> String {
 
-        match self.data {
-            GraphData::OneDimensional(_) => self.draw_1d(),
-            GraphData::TwoDimensional { .. } => self.draw_2d(),
-            GraphData::None => panic!("There's nothing to draw!")
+        match &self.data {
+            GraphData::Data1D(_) => self.draw_1d_graph(),
+            GraphData::Data2D { .. } => self.draw_2d_graph(),
+            GraphData::None => panic!()
         }
 
     }
 
-    pub fn is_valid(&self, print_error_msg: bool) -> bool {
+    /// 1. `self.data` must be set and for 1-D data, it must not be empty.
+    /// 2. If `self.y_min` and `self.y_max` are set, `self.y_max` has to be greater than `self.y_min`.
+    /// 3. If you're using a 2-dimensional data, `data`, `x_labels` and `y_labels` must have the same dimension.
+    pub fn is_valid(&self) -> bool {
+        (match (&self.y_min, &self.y_max) {  // why do I need to wrap it with parenthesis?
+            (Some(n), Some(m)) if n.gt_rat(&m) => false,
+            _ => true
+        }) && match &self.data {
+            GraphData::Data1D(v) => v.len() > 0,
+            GraphData::Data2D { data, x_labels, y_labels } if x_labels.len() > 0 && y_labels.len() > 0 => {
+                let mut x_max = 0;
+                let mut y_max = 0;
 
-        if let (Some(min), Some(max)) = (self.y_min, self.y_max) {
+                for (x, y, _) in data.iter() {
 
-            if min > max {
-                if print_error_msg { println!("self.y_min > self.y_max"); }
-                return false;
-            }
+                    if *x > x_max {
+                        x_max = *x;
+                    }
 
-        }
-
-        let title_len = if let Some(t) = &self.title {
-
-            if self.big_title {
-                let big_title = asciibox::render_string(t, asciibox::RenderOption::default());
-
-                if big_title.len() == 0 {
-                    0
-                } else {
-                    into_lines(&big_title)[0].len()
-                }
-
-            }
-
-            else {
-                into_v16(&t).len()
-            }
-
-        } else {
-            0
-        };
-
-        if title_len > self.plot_width + 6 {
-            if print_error_msg { println!("self.title is too long"); }
-            return false;
-        }
-
-        if self.y_label_interval == 0 {
-            if print_error_msg { println!("self.y_label_interval == 0"); }
-            return false;
-        }
-
-        if self.x_label_interval == 0 {
-            if print_error_msg { println!("self.x_label_interval == 0"); }
-            return false;
-        }
-
-        if self.data == GraphData::None {
-            if print_error_msg { println!("self.data == GraphData::None"); }
-            return false;
-        }
-
-        true
-    }
-
-    fn draw_1d(&self) -> String {
-
-        if !self.is_valid(true) {
-            panic!("Error: Attempt to draw an invalid graph");
-        }
-
-        let mut data = self.data.unwrap_1d();
-        let mut plot_width = self.plot_width;
-        let mut plot_height = self.plot_height;
-
-        let y_label_formatter = match self.number_mode {
-            NumberMode::Real => fractional_number,
-            NumberMode::Integer => sns_int,
-            _ => unreachable!()
-        };
-
-        if plot_width < 3 {
-            if !self.quiet { println!("Warning: `plot_width` is too small! it'll adjust the width..."); }
-            plot_width = 3;
-        }
-
-        if plot_height < 3 {
-            if !self.quiet { println!("Warning: `plot_height` is too small! it'll adjust the height..."); }
-            plot_height = 3;
-        }
-
-        if data.len() > plot_width * 4 {
-
-            if plot_width % 2 == 1 {
-                if !self.quiet { println!("Warning: odd `plot_width` is not supported yet! it'll adjust the width..."); }
-                plot_width += 1;
-            }
-
-            data = fit_data(&data, plot_width);
-        }
-
-        let mut data_sorted = data.clone();
-        data_sorted.sort_by_key(|(_, val)| *val);
-
-        let data_max = if data.len() > 0 { data_sorted[data.len() - 1].1 } else { 0 };
-        let data_min = if data.len() > 0 { data_sorted[0].1 } else { 0 };
-
-        if data_max != data_min && self.number_mode == NumberMode::Integer && (data_max - data_min) < plot_width as i64 / 4 && data_max < i64::MAX / 16384 && data_min > i64::MIN / 16384 {
-            let mut new_graph = Graph {
-                data: GraphData::OneDimensional(
-                    data.into_iter().map(
-                        |(label, val)|
-                        (label, val * 16384)
-                    ).collect()
-                ),
-                ..self.clone()
-            };
-
-            if let Some(n) = new_graph.y_min {
-                new_graph.y_min = Some(n * 16384);
-            }
-
-            if let Some(n) = new_graph.y_max {
-                new_graph.y_max = Some(n * 16384);
-            }
-
-            if let SkipValue::Range(a, b) = new_graph.skip_value {
-                new_graph.skip_value = SkipValue::Range(a * 16384, b * 16384);
-            }
-
-            new_graph.number_mode = NumberMode::Real;
-
-            return new_graph.draw();
-        }
-
-        let graph_margin = (data_max - data_min) / 8 + 1;
-        let mut y_max = if let Some(n) = self.y_max { n } else if data_max < i64::MAX - graph_margin { data_max + graph_margin } else { data_max };
-        let mut y_min = if let Some(n) = self.y_min { n } else if data_min > i64::MIN + graph_margin { data_min - graph_margin } else { data_min };
-
-        if data_max == data_min && self.y_max.is_none() && self.y_min.is_none() {
-
-            if data_max > i64::MAX - 800 {
-                y_max = i64::MAX;
-                y_min = i64::MAX - 800;
-            }
-
-            else if data_min < i64::MIN + 800 {
-                y_max = i64::MIN + 800;
-                y_min = i64::MIN;
-            }
-
-            else {
-                y_max = data_max + 800;
-                y_min = data_min - 800;
-            }
-
-        }
-
-        if let Some((skip_from, skip_to)) = match self.skip_value {
-            SkipValue::Auto if data.len() > 1 && plot_height > 18 => {
-                let mut max_diff = 0;
-                let mut suspicious = (0, 0);
-
-                for i in 0..(data.len() - 1) {
-                    let diff = data_sorted[i + 1].1 - data_sorted[i].1;
-
-                    if diff > max_diff {
-                        max_diff = diff;
-                        suspicious = (data_sorted[i].1, data_sorted[i + 1].1);
+                    if *y > y_max {
+                        y_max = *y;
                     }
 
                 }
 
-                if max_diff > (data_max - data_min) / 4 && max_diff > 4 {
-                    Some((suspicious.0 + 1, suspicious.1 - 1))
+                x_labels.len() >= x_max && y_labels.len() >= y_max && x_labels.len() == self.plot_width && y_labels.len() == self.plot_height
+            }
+            _ => false
+        } && {
+            // TODO
+            true
+        }
+    }
+
+    fn draw_1d_graph(&self) -> String {
+        let mut data = self.data.unwrap_1d().clone();
+
+        if data.len() > self.plot_width * 2 {
+            data = pick_meaningful_values(&data, self.plot_width);
+        }
+
+        let (data_min, data_max, max_diff) = get_min_max_diff(&data, self.plot_height);
+        let (mut y_min, mut y_max) = unwrap_y_min_max(&self.y_min, &self.y_max, &data_min, &data_max);
+
+        let plot_width = match &self.block_width {
+            Some(w) => w * data.len(),
+            _ => self.plot_width
+        };
+
+        let mut ratio_of_subgraphs = (3, 3);
+
+        let mut skip_range = match &self.skip_value {
+            _ if plot_width <= 18 => None,
+            SkipValue::None => None,
+            SkipValue::Automatic => {
+
+                if !max_diff.is_zero() && y_max.sub_rat(&y_min).div_rat(&max_diff).lt_i32(3) {
+                    let (y_min_, from, to, y_max_, ratio_of_subgraphs_) = get_where_to_skip(data.clone());
+                    ratio_of_subgraphs = ratio_of_subgraphs_;
+                    y_min = y_min_;
+                    y_max = y_max_;
+
+                    Some((from, to))
                 }
 
                 else {
                     None
                 }
 
-            }
-            SkipValue::Range(skip_from, skip_to) if data.len() > 1 && plot_height > 18 => if skip_from < data_min || skip_to > data_max || skip_from >= skip_to {
-                if !self.quiet {
-                    println!(
-                        "Warning: SkipValue::Range({skip_from}, {skip_to}) is invalid!\n`skip_from >= data_min && skip_to <= data_max && skip_from < skip_to` must hold but skip_from: {skip_from}, skip_to: {skip_to}, data_min: {data_min}, data_max: {data_max}"
-                    );
-                }
-                None
-            } else {
-                Some((skip_from, skip_to))
             },
-            _ => None
-        } {
-            let upper_y_max = if let Some(n) = self.y_max { n } else if data_max > i64::MAX - (data_max - skip_to) / 8 {
-                i64::MAX
-            } else {
-                data_max + (data_max - skip_to) / 8 + 1
-            };
-            let upper_y_min = skip_to - (data_max - skip_to) / 8;
-
-            let lower_y_max = skip_from + (skip_from - data_min) / 8;
-            let lower_y_min = if let Some(n) = self.y_min { n } else if data_min < i64::MIN + (skip_from - data_min) / 8 {
-                i64::MIN
-            } else {
-                data_min - (skip_from - data_min) / 8 - 1
-            };
-
-            let mut upper_graph_height = plot_height / 3;
-            let mut lower_graph_height = plot_height - upper_graph_height - 1;
-
-            // upper_graph has more values
-            if skip_to < data_sorted[data.len() / 2].1 {
-                let tmp = upper_graph_height;
-                upper_graph_height = lower_graph_height;
-                lower_graph_height = tmp;
-            }
-
-            let upper_graph = Graph {
-                x_axis_label: None,
-                padding_bottom: 0,
-                skip_value: SkipValue::None,
-                plot_height: upper_graph_height,
-                y_max: Some(upper_y_max),
-                y_min: Some(upper_y_min),
-                data: GraphData::OneDimensional(data.clone()),
-                ..self.clone()
-            }.draw();
-            let lower_graph = Graph {
-                padding_top: 0,
-                title: None,
-                y_axis_label: None,
-                skip_value: SkipValue::None,
-                plot_height: lower_graph_height,
-                y_label_interval_offset: 1,
-                y_max: Some(lower_y_max),
-                y_min: Some(lower_y_min),
-                data: GraphData::OneDimensional(data),
-                ..self.clone()
-            }.draw();
-
-            let mut upper_graph = into_lines(&upper_graph);
-            upper_graph = upper_graph[0..(upper_graph.len() - 3)].to_vec();  // remove x axis
-            let mut lower_graph = into_lines(&lower_graph);
-            lower_graph = lower_graph[1..].to_vec();  // remove overflow characters
-            let line_width = lower_graph[0].len();
-
-            let line_breaker = vec![
-                vec![' ' as u16; self.padding_left],
-                vec!['~' as u16; line_width - self.padding_left - self.padding_right],
-                vec![' ' as u16; self.padding_right]
-            ].concat();
-
-            let lines = vec![
-                upper_graph,
-                vec![
-                    line_breaker.clone(),
-                    line_breaker,
-                ],
-                lower_graph
-            ].concat();
-
-            return from_lines(&lines);
-        }
-
-        let y_label_max_len = if let Some(l) = self.y_label_max_len {
-            l
-        } else {
-
-            match self.number_mode {
-                NumberMode::Integer => calc_sns_int_max_len(
-                    y_min.min(data_min), y_max.max(data_max)
-                ),
-                NumberMode::Real => calc_fractional_number_max_len(
-                    y_min.min(data_min), y_max.max(data_max)
-                ),
-                _ => unreachable!()
-            }
-
+            SkipValue::Manual { from, to } => Some((from.clone(), to.clone()))
         };
-        let line_width = plot_width + y_label_max_len + self.padding_left + self.padding_right + 3;
 
-        let mut y_grid_size = (y_max - y_min) / plot_height as i64;
+        if let Some((from, to)) = &skip_range {
 
-        // an error from integer division made a problem
-        if y_max - (plot_height - 1) as i64 * y_grid_size > data_min {
-            y_grid_size += 1;
-
-            // but it must not cause an overflow
-            if y_max < i64::MIN + (plot_height as i64 + 1) * y_grid_size {
-                y_grid_size -= 1;
+            if from.lt_rat(&y_min) || to.gt_rat(&y_max) {
+                skip_range = None;
             }
 
         }
 
-        let mut result = vec![' ' as u16; line_width * (plot_height + 2)];
+        let mut plot = match &skip_range {
+            None => {
+                let mut plot = plot_1d(&data, plot_width, self.plot_height, &y_min, &y_max, false);
+                plot = plot.add_border([false, true, true, false]);
 
-        for y in 0..(plot_height + 2) {
-            result[y * line_width + (line_width - 1)] = '\n' as u16;
+                let y_labels = draw_y_labels_1d_plot(&y_min, &y_max, self.plot_height, self.y_label_interval);
 
-            if y < plot_height {
-                result[y * line_width + y_label_max_len + 1 + self.padding_left] = '|' as u16;
-
-                if y % self.y_label_interval == self.y_label_interval_offset || self.y_label_interval == 1 {
-                    let ylabel = into_v16(&right_align((y_label_formatter)(y_max - y as i64 * y_grid_size), y_label_max_len));
-
-                    for x in 0..ylabel.len() {
-                        result[y * line_width + x + self.padding_left] = ylabel[x];
-                    }
-
-                }
-
+                y_labels.merge_horizontally(&plot, Alignment::First)
             }
+            Some((from, to)) => {
+                let (height1, mut height2) = (
+                    self.plot_height * ratio_of_subgraphs.0 / 6,
+                    self.plot_height * ratio_of_subgraphs.1 / 6,
+                );
+                height2 += self.plot_height - height1 - height2;
 
-        }
+                let mut plot1 = plot_1d(&data, plot_width, height1, &y_min, &from, true);
+                plot1 = plot1.add_border([false, true, true, false]);
 
-        result[plot_height * line_width + y_label_max_len + 1 + self.padding_left] = '└' as u16;
+                let mut plot2 = plot_1d(&data, plot_width, height2, &to, &y_max, false);
+                plot2 = plot2.add_border([false, false, true, false]);
 
-        for x in 0..plot_width {
+                let mut y_labels1 = draw_y_labels_1d_plot(&y_min, &from, height1, self.y_label_interval);
+                let mut y_labels2 = draw_y_labels_1d_plot(&to, &y_max, height2, self.y_label_interval);
 
-            if data.len() > 0 {
-                let (curr_x_label, curr_val) = data[x * data.len() / plot_width].clone();
-                let mut overflow = false;
-                let mut start_y = if y_max > curr_val {
-                    ((y_max - curr_val) * 2 / y_grid_size) as usize
-                } else {
-                    overflow = true;
-                    0
-                };
-                let use_half_block_character = start_y % 2 == 1;
-                start_y /= 2;
-
-                for y in start_y..plot_height {
-                    result[y * line_width + x + y_label_max_len + 2 + self.padding_left] = self.full_block_character;
+                if y_labels1.get_width() < y_labels2.get_width() {
+                    y_labels1 = y_labels1.add_padding([0, 0, y_labels2.get_width() - y_labels1.get_width(), 0]);
                 }
 
-                if use_half_block_character && start_y < plot_height {
-                    result[start_y * line_width + x + y_label_max_len + 2 + self.padding_left] = self.half_block_character;
+                else if y_labels2.get_width() < y_labels1.get_width() {
+                    y_labels2 = y_labels2.add_padding([0, 0, y_labels1.get_width() - y_labels2.get_width(), 0]);
                 }
 
-                else if overflow {
-                    result[x + y_label_max_len + 2 + self.padding_left] = self.overflow_character;
-                }
+                plot1 = y_labels1.merge_horizontally(&plot1, Alignment::First);
+                plot2 = y_labels2.merge_horizontally(&plot2, Alignment::First);
 
-                if x % self.x_label_interval == 0 {
-                    let xlabel = into_v16(&curr_x_label);
+                let horizontal_line = Lines::from_string(&"~".repeat(plot1.get_width()), Alignment::First);
 
-                    if x + xlabel.len() < plot_width + 1 {
+                plot1 = horizontal_line.merge_vertically(&plot1, Alignment::First);
 
-                        for xx in 0..xlabel.len() {
-                            result[(plot_height + 1) * line_width + x + y_label_max_len + 2 + xx + self.padding_left] = xlabel[xx];
-                        }
-
-                    }
-
-                }
-
+                plot2.merge_vertically(&plot1, Alignment::First)
             }
-
-            result[plot_height * line_width + x + y_label_max_len + 2 + self.padding_left] = '-' as u16;
-        }
-
-        result = vec![
-            draw_empty_lines(line_width, self.padding_top),
-            self.draw_title_line(line_width - 1, self.padding_left, self.padding_right),
-            self.draw_y_axis_label(line_width - 1, self.padding_left, y_label_max_len),
-            result,
-            self.draw_x_axis_label(line_width - 1, self.padding_right),
-            draw_empty_lines(line_width, self.padding_bottom)
-        ].concat();
-
-        from_v16(&result)
-    }
-
-    fn draw_2d(&self) -> String {
-
-        if !self.is_valid(true) {
-            panic!("Error: Attempt to draw an invalid graph");
-        }
-
-        let (x_labels, y_labels, data) = self.data.unwrap_2d();
-
-        assert_eq!(self.plot_width, x_labels.len());
-        assert_eq!(self.plot_height, y_labels.len());
-
-        let y_label_max_len = if let Some(l) = self.y_label_max_len {
-            l
-        } else {
-            let mut curr_max = 0;
-
-            for y_label in y_labels.iter() {
-
-                if let Some(l) = y_label {
-                    let len = l.len();  // it's O(n)
-
-                    if len > curr_max {
-                        curr_max = len;
-                    }
-
-                }
-
-            }
-
-            curr_max
         };
-        let line_width = self.plot_width + y_label_max_len + 3 + self.padding_left + self.padding_right;
 
-        let mut result = vec![' ' as u16; line_width * (self.plot_height + 2)];
+        let x_labels = draw_x_labels(&data, plot_width);
+        plot = plot.merge_vertically(&x_labels, Alignment::Last);
 
-        for y in 0..(self.plot_height + 2) {
-            result[y * line_width + (line_width - 1)] = '\n' as u16;
-
-            if y < self.plot_height {
-                result[y * line_width + y_label_max_len + 1 + self.padding_left] = '|' as u16;
-
-                if y != self.plot_height && y_labels[y].is_some() {
-                    let ylabel = into_v16(&right_align(y_labels[y].as_ref().unwrap().to_string(), y_label_max_len));
-
-                    for x in 0..ylabel.len() {
-                        result[y * line_width + x + self.padding_left] = ylabel[x];
-                    }
-
-                }
-
-            }
-
+        if let Some(yal) = &self.y_axis_label {
+            let mut yal = Lines::from_string(yal, Alignment::First);
+            yal = yal.add_padding([self.plot_height, 0, 0, 0]);
+            plot = plot.merge_horizontally(&yal, Alignment::First);
         }
 
-        result[self.plot_height * line_width + y_label_max_len + 1 + self.padding_left] = '└' as u16;
-
-        let mut last_x = 0;
-
-        for x in 0..self.plot_width {
-            result[self.plot_height * line_width + x + y_label_max_len + 2 + self.padding_left] = '-' as u16;
-
-            if x_labels[x].is_some() && (x - last_x >= self.x_label_interval || x == 0) {
-                let xlabel = into_v16(x_labels[x].as_ref().unwrap());
-
-                if x + xlabel.len() < self.plot_width + 1 {
-                    last_x = x;
-
-                    for xx in 0..xlabel.len() {
-                        result[(self.plot_height + 1) * line_width + x + y_label_max_len + 2 + xx + self.padding_left] = xlabel[xx];
-                    }
-
-                }
-
-            }
-
+        if let Some(xal) = &self.x_axis_label {
+            let xal = Lines::from_string(xal, Alignment::First);
+            plot = xal.merge_vertically(&plot, Alignment::First);
         }
 
-        for (x, y, c) in data.into_iter() {
-
-            if x >= self.plot_width || y >= self.plot_height {
-                panic!("{} {} {} {}", x, y, self.plot_width, self.plot_height);
-            }
-
-            result[y * line_width + y_label_max_len + 2 + x + self.padding_left] = c;
+        if let Some(t) = &self.title {
+            let title = draw_title(t, self.big_title);
+            plot = title.merge_vertically(&plot, Alignment::Center);
         }
 
-        result = vec![
-            draw_empty_lines(line_width, self.padding_top),
-            self.draw_title_line(line_width, self.padding_left, self.padding_right),
-            self.draw_y_axis_label(line_width - 1, self.padding_left, y_label_max_len),
-            result,
-            self.draw_x_axis_label(line_width - 1, self.padding_right),
-            draw_empty_lines(line_width, self.padding_bottom)
-        ].concat();
+        plot = plot.add_padding(self.paddings);
 
-        from_v16(&result)
+        plot.to_string()
     }
 
-    fn draw_x_axis_label(&self, line_width: usize, padding_right: usize) -> Vec<u16> {
-        match &self.x_axis_label {
-            Some(l) => {
-                let mut label = l.to_string();
+    fn draw_2d_graph(&self) -> String {
+        let (
+            data, x_labels, y_labels
+        ) = self.data.unwrap_2d();
+        let mut plot = plot_2d(&data, self.plot_width, self.plot_height);
+        plot = plot.add_border([false, true, true, false]);
 
-                label = format_lines(&label, line_width - padding_right, Alignment::Right);
-                label = format_lines(&label, line_width, Alignment::Left);
-                let mut result = into_v16(&label);
-                result.push('\n' as u16);
-                result
-            }
-            None => vec![]
+        let x_labels = draw_x_labels(
+            &x_labels.iter().map(
+                |s| (
+                    match s { Some(s) => s.to_string(), _ => String::new() },
+                    ()
+                )
+            ).collect(),
+            self.plot_width
+        );
+        plot = plot.merge_vertically(&x_labels, Alignment::Last);
+
+        let y_labels = draw_y_labels_2d_plot(y_labels);
+        plot = y_labels.merge_horizontally(&y_labels, Alignment::First);
+
+        if let Some(yal) = &self.y_axis_label {
+            let mut yal = Lines::from_string(yal, Alignment::First);
+            yal = yal.add_padding([self.plot_height, 0, 0, 0]);
+            plot = plot.merge_horizontally(&yal, Alignment::First);
         }
-    }
 
-    fn draw_y_axis_label(&self, line_width: usize, padding_left: usize, y_label_max_len: usize) -> Vec<u16> {
-        match &self.y_axis_label {
-            Some(l) => {
-                let mut label = l.to_string();
-
-                label = format_lines(&label, line_width - padding_left - y_label_max_len, Alignment::Left);
-                label = format_lines(&label, line_width, Alignment::Right);
-                let mut result = into_v16(&label);
-                result.push('\n' as u16);
-                result
-            }
-            None => vec![]
+        if let Some(xal) = &self.x_axis_label {
+            let xal = Lines::from_string(xal, Alignment::First);
+            plot = xal.merge_vertically(&plot, Alignment::First);
         }
-    }
 
-    fn draw_title_line(&self, line_width: usize, padding_left: usize, padding_right: usize) -> Vec<u16> {
-        match &self.title {
-            Some(t) => {
-                let mut title = if self.big_title {
-                    asciibox::render_string(t, asciibox::RenderOption::default())
-                } else {
-                    t.to_string()
-                };
-
-                title = format_lines(&title, line_width - padding_left - padding_right, Alignment::Center);
-                title = format_lines(&title, line_width - padding_left, Alignment::Left);
-                title = format_lines(&title, line_width, Alignment::Right);
-
-                let mut result = into_v16(&title);
-                result.push('\n' as u16);
-
-                result
-            }
-            _ => vec![]
+        if let Some(t) = &self.title {
+            let title = draw_title(t, self.big_title);
+            plot = title.merge_vertically(&plot, Alignment::Center);
         }
+
+        plot = plot.add_padding(self.paddings);
+
+        plot.to_string()
     }
 
 }
 
-fn draw_empty_lines(line_width: usize, height: usize) -> Vec<u16> {
-
-    if height == 0 {
-        return vec![];
-    }
-
-    vec![vec![vec![' ' as u16; line_width - 1], vec!['\n' as u16]].concat(); height].concat()
-}
-
-fn fit_data(data: &Vec<(String, i64)>, width: usize) -> Vec<(String, i64)> {
+fn pick_meaningful_values(data: &Vec<(String, Ratio)>, width: usize) -> Vec<(String, Ratio)> {
     // a graph with odd-sized width is not supported because of this line
     let half_width = width / 2;
 
@@ -711,20 +286,20 @@ fn fit_data(data: &Vec<(String, i64)>, width: usize) -> Vec<(String, i64)> {
     for i in 0..half_width {
         let curr_ind = (i + 1) * data.len() / half_width;
         let mut min_ind = 0;
-        let mut min_val = data[last_ind].1;
+        let mut min_val = &data[last_ind].1;
         let mut max_ind = 0;
-        let mut max_val = data[last_ind].1;
+        let mut max_val = &data[last_ind].1;
 
         for (ind, (_, val)) in data[last_ind..curr_ind].iter().enumerate() {
 
-            if val > &max_val {
+            if val.gt_rat(&max_val) {
                 max_ind = ind;
-                max_val = *val;
+                max_val = val;
             }
 
-            else if val < &min_val {
+            else if val.lt_rat(&min_val) {
                 min_ind = ind;
-                min_val = *val;
+                min_val = val;
             }
 
         }
@@ -743,4 +318,269 @@ fn fit_data(data: &Vec<(String, i64)>, width: usize) -> Vec<(String, i64)> {
     }
 
     result
+}
+
+fn get_where_to_skip(mut data: Vec<(String, Ratio)>) -> (Ratio, Ratio, Ratio, Ratio, (usize, usize)) {
+    let mut curr_max_diff = Ratio::zero();
+    let mut curr_max_diff_ind = 0;
+    data.sort_unstable_by_key(|(_, n)| n.clone());
+
+    for i in 0..(data.len() - 1) {
+        let curr_diff = data[i + 1].1.sub_rat(&data[i].1);
+
+        if curr_diff.gt_rat(&curr_max_diff) {
+            curr_max_diff = curr_diff;
+            curr_max_diff_ind = i;
+        }
+
+    }
+
+    let mut padding1 = data[curr_max_diff_ind].1.sub_rat(&data[0].1).div_i32(16);
+    let mut padding2 = data[data.len() - 1].1.sub_rat(&data[curr_max_diff_ind + 1].1).div_i32(16);
+
+    if padding1.is_zero() {
+        padding1 = data[curr_max_diff_ind + 1].1.sub_rat(&data[curr_max_diff_ind].1).div_i32(16);
+    }
+
+    if padding2.is_zero() {
+        padding2 = data[curr_max_diff_ind + 1].1.sub_rat(&data[curr_max_diff_ind].1).div_i32(16);
+    }
+
+    let ratio_of_subgraphs = if curr_max_diff_ind < data.len() / 3 {
+        (2, 4)
+    } else if curr_max_diff_ind < data.len() * 2 / 3 {
+        (3, 3)
+    } else {
+        (4, 2)
+    };
+
+    (
+        data[0].1.sub_rat(&padding1),
+        data[curr_max_diff_ind].1.add_rat(&padding1),
+        data[curr_max_diff_ind + 1].1.sub_rat(&padding2),
+        data[data.len() - 1].1.add_rat(&padding2),
+        ratio_of_subgraphs
+    )
+}
+
+fn unwrap_y_min_max(self_y_min: &Option<Ratio>, self_y_max: &Option<Ratio>, data_min: &Ratio, data_max: &Ratio) -> (Ratio, Ratio) {
+    match (&self_y_min, &self_y_max) {
+        (Some(n), Some(m)) => (n.clone(), m.clone()),
+        (Some(n), None) => if n.lt_rat(&data_max) {
+            (n.clone(), data_max.clone())
+        } else {
+            (n.clone(), n.add_i32(1))
+        },
+        (None, Some(n)) => if n.gt_rat(&data_min) {
+            (data_min.clone(), n.clone())
+        } else {
+            (n.sub_i32(1), n.clone())
+        },
+        (None, None) => (data_min.clone(), data_max.clone())
+    }
+}
+
+fn get_min_max_diff(v: &Vec<(String, Ratio)>, height: usize) -> (Ratio, Ratio, Ratio) {  // (y_min, y_max, max_diff)
+
+    if v.len() == 0 {
+        return (Ratio::zero(), Ratio::one(), Ratio::zero());
+    }
+
+    let mut data = v.iter().map(|(_, n)| n.clone()).collect::<Vec<Ratio>>();
+    data.sort_unstable();
+
+    let curr_min = &data[0];
+    let curr_max = &data[data.len() - 1];
+    let mut max_diff = Ratio::zero();
+
+    for i in 0..(data.len() - 1) {
+        let diff = data[i + 1].sub_rat(&data[i]);
+
+        if diff.gt_rat(&max_diff) {
+            max_diff = diff;
+        }
+
+    }
+
+    let mut diff = curr_max.sub_rat(curr_min).div_i32(16);
+
+    if diff.is_zero() {
+        diff = Ratio::from_i32(height as i32).div_i32(4);
+    }
+
+    let min = curr_min.sub_rat(&diff);
+    let max = curr_max.add_rat(&diff);
+
+    (min, max, max_diff)
+}
+
+fn draw_title(title: &str, big_title: bool) -> Lines {
+
+    if big_title {
+        Lines::from_string(&asciibox::render_string(title, asciibox::RenderOption::default()), Alignment::First)
+    }
+
+    else {
+        Lines::from_string(title, Alignment::Center)
+    }
+
+}
+
+// no axis
+fn draw_y_labels_2d_plot(y_labels: &Vec<Option<String>>) -> Lines {
+    Lines::from_string(&y_labels.iter().map(
+        |s| match s {
+            Some(s) => s.replace("\n", " "),
+            _ => String::new()
+        }
+    ).collect::<Vec<String>>().join("\n"), Alignment::Last)
+}
+
+// no axis
+fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, interval: usize) -> Lines {
+    let mut labels = Vec::with_capacity(height);
+    let y_diff = y_max.sub_rat(y_min);
+    let mut curr_max_width = 0;
+
+    for y in 0..height {
+
+        if interval > 1 && y % interval != 0 {
+            labels.push(String::new());
+            continue;
+        }
+
+        let curr_y = y_max.sub_rat(&y_diff.mul_i32(y as i32).div_i32(height as i32));
+        let curr_label = format_ratio(&curr_y);
+
+        if curr_label.len() > curr_max_width {
+            curr_max_width = curr_label.len();
+        }
+
+        labels.push(curr_label);
+    }
+
+    Lines::from_string(&labels.join("\n"), Alignment::Last)
+}
+
+// no axis
+fn draw_x_labels<T>(data: &Vec<(String, T)>, width: usize) -> Lines {
+    let mut result = Lines::new(width, 2);
+
+    let mut first_line_filled = 0;
+    let mut second_line_filled = 0;
+    let mut on_first_line = false;
+    let mut last_ind = usize::MAX;
+
+    for x in 0..width {
+        let data_ind = x * data.len() / width;
+
+        if on_first_line && x < first_line_filled || !on_first_line && x < second_line_filled || data_ind == last_ind {
+            continue;
+        }
+
+        let curr_label = &data[data_ind].0;
+        let y_ind = on_first_line as usize;
+
+        if curr_label.len() + x >= width {
+            on_first_line = !on_first_line;
+            continue;
+        }
+
+        for (lab_ind, c) in curr_label.chars().enumerate() {
+            let c = if c == '\n' { 32 } else { c as u16 };
+
+            result.set(x + lab_ind, y_ind, c);
+        }
+
+        last_ind = data_ind;
+
+        if on_first_line {
+            first_line_filled = x + curr_label.len() + 2;
+        }
+
+        else {
+            second_line_filled = x + curr_label.len() + 2;
+        }
+
+        on_first_line = !on_first_line;
+    }
+
+    result
+}
+
+// no axis, no labels, only plots
+fn plot_2d(data: &Vec<(usize, usize, u16)>, width: usize, height: usize) -> Lines {
+    let mut result = Lines::new(width, height);
+
+    for (x, y, c) in data.iter() {
+
+        if *c == '\n' as u16 {
+            result.set(*x, *y, 32);
+        }
+
+        else {
+            result.set(*x, *y, *c);
+        }
+
+    }
+
+    result
+}
+
+// no axis, no labels, only plots
+fn plot_1d(data: &Vec<(String, Ratio)>, width: usize, height: usize, y_min: &Ratio, y_max: &Ratio, no_overflow_char: bool) -> Lines {
+    let mut result = Lines::new(width, height);
+    let y_diff = y_max.sub_rat(y_min);
+
+    for x in 0..width {
+        let data_ind = x * data.len() / width;
+        let data_val = &data[data_ind].1;
+        // truncate(((y_max - data_val) / y_diff * height * 2).max(0))
+        let mut overflow = false;
+        let mut y_start = match y_max.sub_rat(data_val).div_rat(&y_diff).mul_i32(height as i32).mul_i32(4).truncate_bi().to_i32() {
+            Ok(n) if n < 0 => {
+                overflow = true;
+                0
+            },
+            Ok(n) => n as usize,
+            Err(_) => usize::MAX,
+        };
+
+        let block_type = y_start % 4;
+        y_start /= 4;
+
+        if y_start + 1 > height {
+            continue;
+        }
+
+        for y in y_start..height {
+            result.set(x, y, '█' as u16);
+        }
+
+        if overflow && !no_overflow_char {
+            result.set(x, 0, '^' as u16);
+        }
+
+        else {
+            result.set(x, y_start, [
+                '█' as u16,
+                '▆' as u16,
+                '▄' as u16,
+                '▂' as u16
+            ][block_type])
+        }
+
+    }
+
+    result
+}
+
+use std::fmt;
+
+impl fmt::Display for Graph {
+
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "{}", self.draw())
+    }
+
 }

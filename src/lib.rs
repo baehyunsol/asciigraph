@@ -1,11 +1,16 @@
+//! Use strings if you want exact numbers. For example, `set_y_max(3.2)` uses f32 type which cannot represent `3.2` accurately.
+//! But `set_y_max("3.2")` uses internal ratio type which can represent any rational number perfectly.
+
+mod alignment;
+mod convert;
 mod format;
 mod graph;
-mod merge;
+mod lines;
+mod skip_value;
 mod utils;
 
-/// It assumes a korean character (한글) consumes 2 spaces.
-/// For real numbers, it uses fixed point numbers. (14 bits for fractional parts)
+pub use graph::Graph;
 
-pub use graph::{Graph, SkipValue};
-pub use merge::{merge_horiz, merge_vert, Alignment};
-pub use format::format_lines;
+pub use convert::IntoRatio;
+pub use alignment::Alignment;
+pub use skip_value::SkipValue;
