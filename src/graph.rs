@@ -214,15 +214,15 @@ impl Graph {
         let x_labels = draw_x_labels(&data, plot_width);
         plot = plot.merge_vertically(&x_labels, Alignment::Last);
 
-        if let Some(yal) = &self.y_axis_label {
-            let mut yal = Lines::from_string(yal, Alignment::First);
-            yal = yal.add_padding([self.plot_height, 0, 0, 0]);
-            plot = plot.merge_horizontally(&yal, Alignment::First);
+        if let Some(xal) = &self.x_axis_label {
+            let mut xal = Lines::from_string(xal, Alignment::First);
+            xal = xal.add_padding([self.plot_height, 0, 0, 0]);
+            plot = plot.merge_horizontally(&xal, Alignment::First);
         }
 
-        if let Some(xal) = &self.x_axis_label {
-            let xal = Lines::from_string(xal, Alignment::First);
-            plot = xal.merge_vertically(&plot, Alignment::First);
+        if let Some(yal) = &self.y_axis_label {
+            let yal = Lines::from_string(yal, Alignment::First);
+            plot = yal.merge_vertically(&plot, Alignment::First);
         }
 
         if let Some(t) = &self.title {
@@ -256,15 +256,15 @@ impl Graph {
         let y_labels = draw_y_labels_2d_plot(y_labels);
         plot = y_labels.merge_horizontally(&plot, Alignment::First);
 
-        if let Some(yal) = &self.y_axis_label {
-            let mut yal = Lines::from_string(yal, Alignment::First);
-            yal = yal.add_padding([self.plot_height, 0, 0, 0]);
-            plot = plot.merge_horizontally(&yal, Alignment::First);
+        if let Some(xal) = &self.x_axis_label {
+            let mut xal = Lines::from_string(xal, Alignment::First);
+            xal = xal.add_padding([self.plot_height, 0, 0, 0]);
+            plot = plot.merge_horizontally(&xal, Alignment::First);
         }
 
-        if let Some(xal) = &self.x_axis_label {
-            let xal = Lines::from_string(xal, Alignment::First);
-            plot = xal.merge_vertically(&plot, Alignment::First);
+        if let Some(yal) = &self.y_axis_label {
+            let yal = Lines::from_string(yal, Alignment::First);
+            plot = yal.merge_vertically(&plot, Alignment::First);
         }
 
         if let Some(t) = &self.title {
