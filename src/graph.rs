@@ -121,22 +121,22 @@ impl Graph {
     fn draw_1d_graph(&self) -> String {
         let mut data = self.data.unwrap_1d().clone();
 
-        if data.len() > self.plot_width * 2 {
-            data = pick_meaningful_values(&data, self.plot_width);
-        }
-
-        let (data_min, data_max, max_diff) = get_min_max_diff(&data, self.plot_height);
-        let (mut y_min, mut y_max) = unwrap_y_min_max(&self.y_min, &self.y_max, &data_min, &data_max);
-
         let plot_width = match &self.block_width {
             Some(w) => w * data.len(),
             _ => self.plot_width
         };
 
+        if data.len() > plot_width * 2 {
+            data = pick_meaningful_values(&data, plot_width);
+        }
+
+        let (data_min, data_max, max_diff) = get_min_max_diff(&data, self.plot_height);
+        let (mut y_min, mut y_max) = unwrap_y_min_max(&self.y_min, &self.y_max, &data_min, &data_max);
+
         let mut ratio_of_subgraphs = (3, 3);
 
         let mut skip_range = match &self.skip_value {
-            _ if plot_width <= 18 => None,
+            _ if self.plot_height <= 18 => None,
             SkipValue::None => None,
             SkipValue::Automatic => {
 
@@ -252,7 +252,7 @@ impl Graph {
         plot = plot.merge_vertically(&x_labels, Alignment::Last);
 
         let y_labels = draw_y_labels_2d_plot(y_labels);
-        plot = y_labels.merge_horizontally(&y_labels, Alignment::First);
+        plot = y_labels.merge_horizontally(&plot, Alignment::First);
 
         if let Some(yal) = &self.y_axis_label {
             let mut yal = Lines::from_string(yal, Alignment::First);
