@@ -1,6 +1,7 @@
 use hmath::Ratio;
 use crate::convert::IntoRatio;
 
+#[derive(Clone)]
 pub enum SkipValue {
     None,
     Automatic,

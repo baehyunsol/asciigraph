@@ -7,6 +7,7 @@ use crate::skip_value::SkipValue;
 mod merge;
 mod setters;
 
+#[derive(Clone)]
 pub struct Graph {
     data: GraphData,
 
@@ -31,7 +32,7 @@ pub struct Graph {
     paddings: [usize; 4],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 enum GraphData {
     Data1D (Vec<(String, Ratio)>),
     Data2D {
