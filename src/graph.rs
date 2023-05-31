@@ -81,7 +81,7 @@ impl Graph {
         match &self.data {
             GraphData::Data1D(_) => self.draw_1d_graph(),
             GraphData::Data2D { .. } => self.draw_2d_graph(),
-            GraphData::None => panic!()
+            GraphData::None => panic!("Cannot draw a graph without any data")
         }
 
     }
@@ -156,7 +156,32 @@ impl Graph {
                 }
 
             },
-            SkipValue::Manual { from, to } => Some((from.clone(), to.clone()))
+            SkipValue::Manual { from, to } => {
+                let mut values_below_skip_range = 0;
+                let mut values_above_skip_range = 0;
+
+                for (_, n) in data.iter() {
+
+                    if n.lt_rat(from) {
+                        values_below_skip_range += 1;
+                    }
+
+                    else if n.gt_rat(to) {
+                        values_above_skip_range += 1;
+                    }
+
+                }
+
+                if values_below_skip_range * 3 > data.len() * 2 {
+                    ratio_of_subgraphs = (4, 2);
+                }
+
+                else if values_above_skip_range * 3 > data.len() * 2 {
+                    ratio_of_subgraphs = (2, 4);
+                }
+
+                Some((from.clone(), to.clone()))
+            }
         };
 
         if let Some((from, to)) = &skip_range {
