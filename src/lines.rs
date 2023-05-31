@@ -1,4 +1,5 @@
 use crate::alignment::Alignment;
+use crate::utils::into_v16;
 
 #[derive(Clone, Debug)]
 pub struct Lines {
@@ -351,7 +352,7 @@ impl Lines {
         let mut max_width = 0;
         let raw_lines: Vec<Vec<u16>> = s.split("\n").map(
             |raw_line| {
-                let result = raw_line.encode_utf16().collect::<Vec<u16>>();
+                let result = into_v16(&raw_line);
 
                 if result.len() > max_width {
                     max_width = result.len();

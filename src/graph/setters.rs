@@ -24,6 +24,137 @@ impl Graph {
         self
     }
 
+    /// It's like `set_2d_data`, but has twice higher resolution. You cannot set characters, you can only plot dots.
+    /// That means the width and the height of `data` has to be twice of that of `x_labels` and `y_labels`.
+    pub fn set_2d_data_high_resolution(&mut self, data: &Vec<(usize, usize)>, x_labels: &Vec<Option<String>>, y_labels: &Vec<Option<String>>) -> &mut Self {
+        self.plot_width = x_labels.len();
+        self.plot_height = y_labels.len();
+        let mut grid = vec![vec![false; self.plot_width * 2]; self.plot_height * 2];
+
+        for (x, y) in data.iter() {
+            grid[*y][*x] = true;
+        }
+
+        // the new capacity might be bigger than `data.len() / 2`. it's just a rough optimization
+        let mut data = Vec::with_capacity(data.len() / 2);
+
+        for x in 0..self.plot_width {
+
+            for y in 0..self.plot_height {
+
+                match (
+                    grid[y * 2][x * 2], grid[y * 2][x * 2 + 1],
+                    grid[y * 2 + 1][x * 2], grid[y * 2 + 1][x * 2 + 1],
+                ) {
+                    (
+                        true, true,
+                        true, true
+                    ) => {
+                        data.push((x, y, '█' as u16));
+                    }
+                    (
+                        true, true,
+                        true, false
+                    ) => {
+                        data.push((x, y, '▛' as u16));
+                    }
+                    (
+                        true, true,
+                        false, true
+                    ) => {
+                        data.push((x, y, '▜' as u16));
+                    }
+                    (
+                        true, true,
+                        false, false
+                    ) => {
+                        data.push((x, y, '▀' as u16));
+                    }
+                    (
+                        true, false,
+                        true, true
+                    ) => {
+                        data.push((x, y, '▙' as u16));
+                    }
+                    (
+                        true, false,
+                        true, false
+                    ) => {
+                        data.push((x, y, '▌' as u16));
+                    }
+                    (
+                        true, false,
+                        false, true
+                    ) => {
+                        data.push((x, y, '▚' as u16));
+                    }
+                    (
+                        true, false,
+                        false, false
+                    ) => {
+                        data.push((x, y, '▘' as u16));
+                    }
+                    (
+                        false, true,
+                        true, true
+                    ) => {
+                        data.push((x, y, '▟' as u16));
+                    }
+                    (
+                        false, true,
+                        true, false
+                    ) => {
+                        data.push((x, y, '▞' as u16));
+                    }
+                    (
+                        false, true,
+                        false, true
+                    ) => {
+                        data.push((x, y, '▐' as u16));
+                    }
+                    (
+                        false, true,
+                        false, false
+                    ) => {
+                        data.push((x, y, '▝' as u16));
+                    }
+                    (
+                        false, false,
+                        true, true
+                    ) => {
+                        data.push((x, y, '▄' as u16));
+                    }
+                    (
+                        false, false,
+                        true, false
+                    ) => {
+                        data.push((x, y, '▖' as u16));
+                    }
+                    (
+                        false, false,
+                        false, true
+                    ) => {
+                        data.push((x, y, '▗' as u16));
+                    }
+                    (
+                        false, false,
+                        false, false
+                    ) => { }
+                }
+
+            }
+
+        }
+
+        self.data = GraphData::Data2D {
+            data,
+            x_labels: x_labels.clone(),
+            y_labels: y_labels.clone(),
+        };
+
+        self
+    }
+
     /// `T` can be any number type, including f32 and f64. NaN is converted to 0, -Inf is converted to f32::MIN and Inf to f32::MAX (or f64).\
     /// The data is labeled using indices (from 0).
     pub fn set_1d_data<T: IntoRatio>(&mut self, data: &Vec<T>) -> &mut Self {
