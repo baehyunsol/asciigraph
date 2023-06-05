@@ -2,7 +2,6 @@
 //! But `set_y_max("3.2")` uses internal ratio type which can represent any rational number perfectly.
 
 mod alignment;
-mod convert;
 mod format;
 mod graph;
 mod lines;
@@ -11,7 +10,6 @@ mod utils;
 
 pub use graph::Graph;
 
-pub use convert::IntoRatio;
 pub use alignment::Alignment;
 pub use skip_value::SkipValue;
 

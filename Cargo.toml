@@ -1,6 +1,6 @@
 [package]
 name = "asciigraph"
-version = "0.7.6"
+version = "0.7.7"
 edition = "2021"
 description = "Ascii Graph"
 license = "MIT"
@@ -8,6 +8,6 @@ license = "MIT"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hmath = "0.1.5"
+hmath = "0.1.6"
 lazy_static = "1.4.0"
 asciibox = "0.1.0"

@@ -1,6 +1,5 @@
 use crate::Graph;
 use crate::graph::GraphData;
-use crate::convert::IntoRatio;
 use crate::skip_value::SkipValue;
 use hmath::Ratio;
 
@@ -157,36 +156,40 @@ impl Graph {
 
     /// `T` can be any number type, including f32 and f64. NaN is converted to 0, -Inf is converted to f32::MIN and Inf to f32::MAX (or f64).\
     /// The data is labeled using indices (from 0).
-    pub fn set_1d_data<T: IntoRatio>(&mut self, data: &Vec<T>) -> &mut Self {
-        let data: Vec<(String, Ratio)> = data.iter().enumerate().map(|(i, n)| (i.to_string(), n.into_ratio())).collect();
+    pub fn set_1d_data<T: Into<Ratio> + Clone>(&mut self, data: &Vec<T>) -> &mut Self {
+
+        // in order for `String`s to be `T`, it has to clone n inside the `map` method.
+        let data: Vec<(String, Ratio)> = data.iter().enumerate().map(|(i, n)| (i.to_string(), n.clone().into())).collect();
 
         self.data = GraphData::Data1D(data);
         self
     }
 
     /// `T` can be any number type, including f32 and f64. NaN is converted to 0, -Inf is converted to f32::MIN and Inf to f32::MAX (or f64).\
-    pub fn set_1d_labeled_data<T: IntoRatio>(&mut self, data: &Vec<(String, T)>) -> &mut Self {
-        let data: Vec<(String, Ratio)> = data.iter().map(|(label, n)| (label.to_string(), n.into_ratio())).collect();
+    pub fn set_1d_labeled_data<T: Into<Ratio> + Clone>(&mut self, data: &Vec<(String, T)>) -> &mut Self {
+
+        // in order for `String`s to be `T`, it has to clone n inside the `map` method.
+        let data: Vec<(String, Ratio)> = data.iter().map(|(label, n)| (label.to_string(), n.clone().into())).collect();
 
         self.data = GraphData::Data1D(data);
         self
     }
 
-    pub fn set_y_min<T: IntoRatio>(&mut self, y_min: T) -> &mut Self {
-        self.y_min = Some(y_min.into_ratio());
+    pub fn set_y_min<T: Into<Ratio>>(&mut self, y_min: T) -> &mut Self {
+        self.y_min = Some(y_min.into());
 
         self
     }
 
-    pub fn set_y_max<T: IntoRatio>(&mut self, y_max: T) -> &mut Self {
-        self.y_max = Some(y_max.into_ratio());
+    pub fn set_y_max<T: Into<Ratio>>(&mut self, y_max: T) -> &mut Self {
+        self.y_max = Some(y_max.into());
 
         self
     }
 
-    pub fn set_y_range<T: IntoRatio, U: IntoRatio>(&mut self, y_min: T, y_max: U) -> &mut Self {
-        self.y_min = Some(y_min.into_ratio());
-        self.y_max = Some(y_max.into_ratio());
+    pub fn set_y_range<T: Into<Ratio>, U: Into<Ratio>>(&mut self, y_min: T, y_max: U) -> &mut Self {
+        self.y_min = Some(y_min.into());
+        self.y_max = Some(y_max.into());
 
         self
     }

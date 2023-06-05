@@ -1,5 +1,4 @@
 use hmath::Ratio;
-use crate::convert::IntoRatio;
 
 #[derive(Clone)]
 pub enum SkipValue {
@@ -21,9 +20,9 @@ impl SkipValue {
     }
 
     /// Forces the engine to skip this range. It panics if `from > to`
-    pub fn manual<T: IntoRatio, U: IntoRatio>(from: T, to: U) -> Self {
-        let from = from.into_ratio();
-        let to = to.into_ratio();
+    pub fn manual<T: Into<Ratio>, U: Into<Ratio>>(from: T, to: U) -> Self {
+        let from = from.into();
+        let to = to.into();
         assert!(from.leq_rat(&to));
 
         SkipValue::Manual {
