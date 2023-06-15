@@ -3,6 +3,7 @@ use crate::alignment::Alignment;
 use crate::lines::Lines;
 use crate::format::format_ratio;
 use crate::skip_value::SkipValue;
+use std::collections::HashSet;
 
 mod merge;
 mod setters;
@@ -157,26 +158,26 @@ impl Graph {
 
             },
             SkipValue::Manual { from, to } => {
-                let mut values_below_skip_range = 0;
-                let mut values_above_skip_range = 0;
+                let mut values_below_skip_range = HashSet::new();
+                let mut values_above_skip_range = HashSet::new();
 
                 for (_, n) in data.iter() {
 
                     if n.lt_rat(from) {
-                        values_below_skip_range += 1;
+                        values_below_skip_range.insert(n.clone());
                     }
 
                     else if n.gt_rat(to) {
-                        values_above_skip_range += 1;
+                        values_above_skip_range.insert(n.clone());
                     }
 
                 }
 
-                if values_below_skip_range * 3 > data.len() * 2 {
+                if values_below_skip_range.len() * 2 > values_above_skip_range.len() * 3 {
                     ratio_of_subgraphs = (4, 2);
                 }
 
-                else if values_above_skip_range * 3 > data.len() * 2 {
+                else if values_above_skip_range.len() * 2 > values_below_skip_range.len() * 3 {
                     ratio_of_subgraphs = (2, 4);
                 }
 
@@ -202,11 +203,19 @@ impl Graph {
                 y_labels.merge_horizontally(&plot, Alignment::First)
             }
             Some((from, to)) => {
-                let (height1, mut height2) = (
+                let (mut height1, mut height2) = (
                     self.plot_height * ratio_of_subgraphs.0 / 6,
                     self.plot_height * ratio_of_subgraphs.1 / 6,
                 );
                 height2 += self.plot_height - height1 - height2;
+
+                if height1 > height2 {
+                    height1 -= 1;
+                }
+
+                else {
+                    height2 -= 1;
+                }
 
                 let mut plot1 = plot_1d(&data, plot_width, height1, &y_min, &from, true);
                 plot1 = plot1.add_border([false, true, true, false]);
@@ -374,13 +383,17 @@ fn get_where_to_skip(mut data: Vec<(String, Ratio)>) -> (Ratio, Ratio, Ratio, Ra
         padding2 = data[curr_max_diff_ind + 1].1.sub_rat(&data[curr_max_diff_ind].1).div_i32(16);
     }
 
-    let ratio_of_subgraphs = if curr_max_diff_ind < data.len() / 3 {
-        (2, 4)
-    } else if curr_max_diff_ind < data.len() * 2 / 3 {
-        (3, 3)
-    } else {
-        (4, 2)
-    };
+    let mut ratio_of_subgraphs = (3, 3);
+    let values_below_skip_range = data[0..(curr_max_diff_ind + 1)].iter().map(|(_, n)| n).collect::<HashSet<&Ratio>>();
+    let values_above_skip_range = data[(curr_max_diff_ind + 1)..].iter().map(|(_, n)| n).collect::<HashSet<&Ratio>>();
+
+    if values_below_skip_range.len() * 2 > values_above_skip_range.len() * 3 {
+        ratio_of_subgraphs = (4, 2);
+    }
+
+    else if values_above_skip_range.len() * 2 > values_below_skip_range.len() * 3 {
+        ratio_of_subgraphs = (2, 4);
+    }
 
     (
         data[0].1.sub_rat(&padding1),
