@@ -30,4 +30,13 @@ impl SkipValue {
         }
     }
 
+    pub(crate) fn is_automatic(&self) -> bool {
+
+        match self {
+            SkipValue::Automatic => true,
+            _ => false
+        }
+
+    }
+
 }

@@ -194,6 +194,15 @@ impl Graph {
         self
     }
 
+    /// If the engine automatically sets the range of y axis, the value would be ugly.
+    /// For example, let's say (y_min, y_max) = (-0.1, 499.9). In this case, if you set `set_pretty_y(5)`,
+    /// it makes all the y_labels multiple of 5.
+    pub fn set_pretty_y<T: Into<Ratio>>(&mut self, y: T) -> &mut Self {
+        self.pretty_y = Some(y.into());
+
+        self
+    }
+
     pub fn set_plot_width(&mut self, plot_width: usize) -> &mut Self {
         self.plot_width = plot_width;
 
@@ -296,6 +305,7 @@ impl Default for Graph {
             paddings: [0; 4],
             y_max: None,
             y_min: None,
+            pretty_y: Some(Ratio::from(0.5)),
             title: None,
             skip_value: SkipValue::Automatic,
             x_axis_label: None,

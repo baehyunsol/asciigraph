@@ -30,6 +30,8 @@ pub struct Graph {
     y_min: Option<Ratio>,
     y_max: Option<Ratio>,
 
+    pretty_y: Option<Ratio>,
+
     skip_value: SkipValue,
 
     paddings: [usize; 4],
@@ -146,10 +148,25 @@ impl Graph {
                 if !max_diff.is_zero() && y_max.sub_rat(&y_min).div_rat(&max_diff).lt_i32(3) {
                     let (y_min_, from, to, y_max_, ratio_of_subgraphs_) = get_where_to_skip(data.clone());
                     ratio_of_subgraphs = ratio_of_subgraphs_;
-                    y_min = y_min_;
-                    y_max = y_max_;
 
-                    Some((from, to))
+                    // respect self.y_min and self.y_max if they're explicitly set
+                    if self.y_min.is_none() {
+                        y_min = y_min_;
+                    }
+
+                    if self.y_max.is_none() {
+                        y_max = y_max_;
+                    }
+
+                    // if the explicitly set y_min and y_max are not compatible with the skipped range, it doesn't skip
+                    if y_min.lt_rat(&from) && to.lt_rat(&y_max) {
+                        Some((from, to))
+                    }
+
+                    else {
+                        None
+                    }
+
                 }
 
                 else {
@@ -195,7 +212,21 @@ impl Graph {
 
         let mut plot = match &skip_range {
             None => {
-                let mut plot = plot_1d(&data, plot_width, self.plot_height, &y_min, &y_max, false);
+                let (y_min, y_max) = prettify_y_labels(
+                    &y_min,
+                    &y_max,
+                    self.plot_height,
+                    self.pretty_y.as_ref().map(|n| (self.y_min.is_none(), self.y_max.is_none(), n.clone()))
+                );
+
+                let mut plot = plot_1d(
+                    &data,
+                    plot_width,
+                    self.plot_height,
+                    &y_min,
+                    &y_max,
+                    false,  // no_overflow_char
+                );
                 plot = plot.add_border([false, true, true, false]);
 
                 let y_labels = draw_y_labels_1d_plot(&y_min, &y_max, self.plot_height, self.y_label_interval);
@@ -207,24 +238,57 @@ impl Graph {
                     self.plot_height * ratio_of_subgraphs.0 / 6,
                     self.plot_height * ratio_of_subgraphs.1 / 6,
                 );
-                height2 += self.plot_height - height1 - height2;
 
+                // it has to be height1 + height2 + 1 == self.plot_height
+                // 1 is for the delimiter line
                 if height1 > height2 {
-                    height1 -= 1;
-                }
-
-                else {
+                    height1 += self.plot_height - height1 - height2;
                     height2 -= 1;
                 }
 
-                let mut plot1 = plot_1d(&data, plot_width, height1, &y_min, &from, true);
+                else {
+                    height2 += self.plot_height - height1 - height2;
+                    height1 -= 1;
+                }
+
+                // if y_min, y_max, or skip_value is explicitly set by the user, it never touches them
+                // otherwise it tries to adjust them for prettier y_labels
+                let (plot1_y_min, plot1_y_max) = prettify_y_labels(
+                    &y_min,
+                    &from,
+                    height1,
+                    self.pretty_y.as_ref().map(|n| (self.y_min.is_none(), self.skip_value.is_automatic(), n.clone()))
+                );
+
+                let mut plot1 = plot_1d(
+                    &data,
+                    plot_width,
+                    height1,
+                    &plot1_y_min,
+                    &plot1_y_max,
+                    true,  // no_overflow_char
+                );
                 plot1 = plot1.add_border([false, true, true, false]);
 
-                let mut plot2 = plot_1d(&data, plot_width, height2, &to, &y_max, false);
+                let (plot2_y_min, plot2_y_max) = prettify_y_labels(
+                    &to,
+                    &y_max,
+                    height2,
+                    self.pretty_y.as_ref().map(|n| (self.skip_value.is_automatic(), self.y_max.is_none(), n.clone()))
+                );
+
+                let mut plot2 = plot_1d(
+                    &data,
+                    plot_width,
+                    height2,
+                    &plot2_y_min,
+                    &plot2_y_max,
+                    false,  // no_overflow_char
+                );
                 plot2 = plot2.add_border([false, false, true, false]);
 
-                let mut y_labels1 = draw_y_labels_1d_plot(&y_min, &from, height1, self.y_label_interval);
-                let mut y_labels2 = draw_y_labels_1d_plot(&to, &y_max, height2, self.y_label_interval);
+                let mut y_labels1 = draw_y_labels_1d_plot(&plot1_y_min, &plot1_y_max, height1, self.y_label_interval);
+                let mut y_labels2 = draw_y_labels_1d_plot(&plot2_y_min, &plot2_y_max, height2, self.y_label_interval);
 
                 if y_labels1.get_width() < y_labels2.get_width() {
                     y_labels1 = y_labels1.add_padding([0, 0, y_labels2.get_width() - y_labels1.get_width(), 0]);
@@ -479,8 +543,10 @@ fn draw_y_labels_2d_plot(y_labels: &Vec<Option<String>>) -> Lines {
 
 // no axis
 fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, interval: usize) -> Lines {
+    // TODO: prettify_y_labels 여기도 해야함!
     let mut labels = Vec::with_capacity(height);
     let y_diff = y_max.sub_rat(y_min);
+    let y_label_step = y_diff.div_i32(height as i32);
     let mut curr_max_width = 0;
 
     for y in 0..height {
@@ -490,7 +556,7 @@ fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, interval: 
             continue;
         }
 
-        let curr_y = y_max.sub_rat(&y_diff.mul_i32(y as i32).div_i32(height as i32));
+        let curr_y = y_max.sub_rat(&y_label_step.mul_i32(y as i32));
         let curr_label = format_ratio(&curr_y);
 
         if curr_label.len() > curr_max_width {
@@ -571,13 +637,14 @@ fn plot_2d(data: &Vec<(usize, usize, u16)>, width: usize, height: usize) -> Line
 // no axis, no labels, only plots
 fn plot_1d(data: &Vec<(String, Ratio)>, width: usize, height: usize, y_min: &Ratio, y_max: &Ratio, no_overflow_char: bool) -> Lines {
     let mut result = Lines::new(width, height);
-    let y_diff = y_max.sub_rat(y_min);
+    let y_diff = y_max.sub_rat(&y_min);
 
     for x in 0..width {
         let data_ind = x * data.len() / width;
         let data_val = &data[data_ind].1;
-        // truncate(((y_max - data_val) / y_diff * height * 2).max(0))
         let mut overflow = false;
+
+        // truncate(((y_max - data_val) / y_diff * height * 2).max(0))
         let mut y_start = match y_max.sub_rat(data_val).div_rat(&y_diff).mul_i32(height as i32).mul_i32(4).truncate_bi().to_i32() {
             Ok(n) if n < 0 => {
                 overflow = true;
@@ -614,6 +681,60 @@ fn plot_1d(data: &Vec<(String, Ratio)>, width: usize, height: usize, y_min: &Rat
     }
 
     result
+}
+
+// if y_min and y_max are (0, 499.8), the output would be very ugly
+// it adjusts numbers in such cases
+//
+// it works when both y_min and y_max are movable
+// -> in order to make all the labels pretty, both end(start) point and interval have to be modified
+fn prettify_y_labels(old_y_min: &Ratio, old_y_max: &Ratio, height: usize, pretty_y_label_info: Option<(bool, bool, Ratio)>) -> (Ratio, Ratio) {
+
+    if let Some((y_min_movable, y_max_movable, interval)) = pretty_y_label_info {
+
+        if !y_max_movable || (!y_min_movable && !old_y_min.div_rat(&interval).is_integer()) {
+            (old_y_min.clone(), old_y_max.clone())
+        }
+
+        else {
+            let curr_interval = old_y_max.sub_rat(old_y_min).div_i32(height as i32);
+
+            // curr_interval / interval =
+            // 15/16 ~ 17/16   -> 1, 30/16 ~ 34/16   -> 2, 45/16 ~ 51/16  -> 3,
+            // 60/16 ~ 68/16   -> 4, 75/16 ~ 85/16   -> 5, 90/16 ~ 102/16 -> 6,
+            // 105/16 ~ 119/16 -> 7, 120/16 ~ 136/16 -> 8 ... okay from here
+            let should_be_multiple_of_16 = curr_interval.div_rat(&interval).mul_i32(16).round_bi();
+
+            if let Ok(n) = should_be_multiple_of_16.to_i32() {
+
+                if n < 15 || (17 < n && n < 30)
+                    || (34 < n && n < 45)
+                    || (51 < n && n < 60)
+                    || (68 < n && n < 75)
+                    || (85 < n && n < 90)
+                    || (102 < n && n < 105)
+                {
+                    return (old_y_min.clone(), old_y_max.clone());
+                }
+
+            }
+
+            // round y_min to the closest multiple of `interval`
+            // round (y_max - y_min) to the closest multiple of `interval` then add it to new `y_min`
+            let new_y_min = old_y_min.div_rat(&interval).round().mul_rat(&interval);
+            let y_diff = old_y_max.sub_rat(&new_y_min);
+            let new_y_diff = y_diff.div_rat(&interval).div_i32(height as i32).round().mul_rat(&interval).mul_i32(height as i32);
+            let new_y_max = new_y_min.add_rat(&new_y_diff);
+
+            (new_y_min, new_y_max)
+        }
+
+    }
+
+    else {
+        (old_y_min.clone(), old_y_max.clone())
+    }
+
 }
 
 use std::fmt;
