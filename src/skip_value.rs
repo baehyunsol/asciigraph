@@ -20,9 +20,9 @@ impl SkipValue {
     }
 
     /// Forces the engine to skip this range. It panics if `from > to`
-    pub fn manual<T: Into<Ratio>, U: Into<Ratio>>(from: T, to: U) -> Self {
-        let from = from.into();
-        let to = to.into();
+    pub fn manual<T: TryInto<Ratio>, U: TryInto<Ratio>>(from: T, to: U) -> Self {
+        let from = from.try_into().unwrap_or(Ratio::zero());
+        let to = to.try_into().unwrap_or(Ratio::zero());
         assert!(from.leq_rat(&to));
 
         SkipValue::Manual {

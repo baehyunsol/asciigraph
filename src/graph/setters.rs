@@ -156,40 +156,40 @@ impl Graph {
 
     /// `T` can be any number type, including f32 and f64. NaN is converted to 0, -Inf is converted to f32::MIN and Inf to f32::MAX (or f64).\
     /// The data is labeled using indices (from 0).
-    pub fn set_1d_data<T: Into<Ratio> + Clone>(&mut self, data: &Vec<T>) -> &mut Self {
+    pub fn set_1d_data<T: TryInto<Ratio> + Clone>(&mut self, data: &Vec<T>) -> &mut Self {
 
         // in order for `String`s to be `T`, it has to clone n inside the `map` method.
-        let data: Vec<(String, Ratio)> = data.iter().enumerate().map(|(i, n)| (i.to_string(), n.clone().into())).collect();
+        let data: Vec<(String, Ratio)> = data.iter().enumerate().map(|(i, n)| (i.to_string(), n.clone().try_into().unwrap_or(Ratio::zero()))).collect();
 
         self.data = GraphData::Data1D(data);
         self
     }
 
     /// `T` can be any number type, including f32 and f64. NaN is converted to 0, -Inf is converted to f32::MIN and Inf to f32::MAX (or f64).\
-    pub fn set_1d_labeled_data<T: Into<Ratio> + Clone>(&mut self, data: &Vec<(String, T)>) -> &mut Self {
+    pub fn set_1d_labeled_data<T: TryInto<Ratio> + Clone>(&mut self, data: &Vec<(String, T)>) -> &mut Self {
 
         // in order for `String`s to be `T`, it has to clone n inside the `map` method.
-        let data: Vec<(String, Ratio)> = data.iter().map(|(label, n)| (label.to_string(), n.clone().into())).collect();
+        let data: Vec<(String, Ratio)> = data.iter().map(|(label, n)| (label.to_string(), n.clone().try_into().unwrap_or(Ratio::zero()))).collect();
 
         self.data = GraphData::Data1D(data);
         self
     }
 
-    pub fn set_y_min<T: Into<Ratio>>(&mut self, y_min: T) -> &mut Self {
-        self.y_min = Some(y_min.into());
+    pub fn set_y_min<T: TryInto<Ratio>>(&mut self, y_min: T) -> &mut Self {
+        self.y_min = Some(y_min.try_into().unwrap_or(Ratio::zero()));
 
         self
     }
 
-    pub fn set_y_max<T: Into<Ratio>>(&mut self, y_max: T) -> &mut Self {
-        self.y_max = Some(y_max.into());
+    pub fn set_y_max<T: TryInto<Ratio>>(&mut self, y_max: T) -> &mut Self {
+        self.y_max = Some(y_max.try_into().unwrap_or(Ratio::zero()));
 
         self
     }
 
-    pub fn set_y_range<T: Into<Ratio>, U: Into<Ratio>>(&mut self, y_min: T, y_max: U) -> &mut Self {
-        self.y_min = Some(y_min.into());
-        self.y_max = Some(y_max.into());
+    pub fn set_y_range<T: TryInto<Ratio>, U: TryInto<Ratio>>(&mut self, y_min: T, y_max: U) -> &mut Self {
+        self.y_min = Some(y_min.try_into().unwrap_or(Ratio::zero()));
+        self.y_max = Some(y_max.try_into().unwrap_or(Ratio::zero()));
 
         self
     }
@@ -197,8 +197,8 @@ impl Graph {
     /// If the engine automatically sets the range of y axis, the value would be ugly.
     /// For example, let's say (y_min, y_max) = (-0.1, 499.9). In this case, if you set `set_pretty_y(5)`,
     /// it makes all the y_labels multiple of 5.
-    pub fn set_pretty_y<T: Into<Ratio>>(&mut self, y: T) -> &mut Self {
-        self.pretty_y = Some(y.into());
+    pub fn set_pretty_y<T: TryInto<Ratio>>(&mut self, y: T) -> &mut Self {
+        self.pretty_y = Some(y.try_into().unwrap_or(Ratio::zero()));
 
         self
     }
@@ -305,7 +305,7 @@ impl Default for Graph {
             paddings: [0; 4],
             y_max: None,
             y_min: None,
-            pretty_y: Some(Ratio::from(0.5)),
+            pretty_y: Some(Ratio::try_from(0.5).unwrap()),
             title: None,
             skip_value: SkipValue::Automatic,
             x_axis_label: None,
