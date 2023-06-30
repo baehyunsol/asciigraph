@@ -215,8 +215,14 @@ impl Graph {
         self
     }
 
-    pub fn set_y_label_interval(&mut self, y_label_interval: usize) -> &mut Self {
-        self.y_label_interval = y_label_interval;
+    pub fn set_y_label_margin(&mut self, y_label_margin: usize) -> &mut Self {
+        self.y_label_margin = y_label_margin;
+
+        self
+    }
+
+    pub fn set_x_label_margin(&mut self, x_label_margin: usize) -> &mut Self {
+        self.x_label_margin = x_label_margin;
 
         self
     }
@@ -301,7 +307,8 @@ impl Default for Graph {
             plot_height: 28,
             block_width: None,
             data: GraphData::None,
-            y_label_interval: 2,
+            x_label_margin: 2,
+            y_label_margin: 2,
             paddings: [0; 4],
             y_max: None,
             y_min: None,

@@ -17,7 +17,7 @@ fn main() {
     .set_y_max(3)
     .set_plot_height(20)
     .set_block_width(3)
-    .set_y_label_interval(1)
+    .set_y_label_margin(1)
     .set_title("HEllo World!123123123")
     .set_paddings([1;4])
     .set_big_title(true)
@@ -32,7 +32,7 @@ fn main() {
     .set_y_min("0.0")
     .set_y_max(16.0)
     .set_block_width(3)
-    .set_y_label_interval(1);
+    .set_y_label_margin(1);
 
     println!("{g2}");
 

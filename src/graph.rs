@@ -22,7 +22,8 @@ pub struct Graph {
 
     block_width: Option<usize>,
 
-    y_label_interval: usize,
+    x_label_margin: usize,
+    y_label_margin: usize,
 
     x_axis_label: Option<String>,
     y_axis_label: Option<String>,
@@ -229,7 +230,7 @@ impl Graph {
                 );
                 plot = plot.add_border([false, true, true, false]);
 
-                let y_labels = draw_y_labels_1d_plot(&y_min, &y_max, self.plot_height, self.y_label_interval);
+                let y_labels = draw_y_labels_1d_plot(&y_min, &y_max, self.plot_height, self.y_label_margin);
 
                 y_labels.merge_horizontally(&plot, Alignment::First)
             }
@@ -287,8 +288,8 @@ impl Graph {
                 );
                 plot2 = plot2.add_border([false, false, true, false]);
 
-                let mut y_labels1 = draw_y_labels_1d_plot(&plot1_y_min, &plot1_y_max, height1, self.y_label_interval);
-                let mut y_labels2 = draw_y_labels_1d_plot(&plot2_y_min, &plot2_y_max, height2, self.y_label_interval);
+                let mut y_labels1 = draw_y_labels_1d_plot(&plot1_y_min, &plot1_y_max, height1, self.y_label_margin);
+                let mut y_labels2 = draw_y_labels_1d_plot(&plot2_y_min, &plot2_y_max, height2, self.y_label_margin);
 
                 if y_labels1.get_width() < y_labels2.get_width() {
                     y_labels1 = y_labels1.add_padding([0, 0, y_labels2.get_width() - y_labels1.get_width(), 0]);
@@ -309,7 +310,7 @@ impl Graph {
             }
         };
 
-        let x_labels = draw_x_labels(&data, plot_width);
+        let x_labels = draw_x_labels(&data, plot_width, self.x_label_margin);
         plot = plot.merge_vertically(&x_labels, Alignment::Last);
 
         if let Some(xal) = &self.x_axis_label {
@@ -347,7 +348,8 @@ impl Graph {
                     ()
                 )
             ).collect(),
-            self.plot_width
+            self.plot_width,
+            self.x_label_margin
         );
         plot = plot.merge_vertically(&x_labels, Alignment::Last);
 
@@ -542,8 +544,7 @@ fn draw_y_labels_2d_plot(y_labels: &Vec<Option<String>>) -> Lines {
 }
 
 // no axis
-fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, interval: usize) -> Lines {
-    // TODO: prettify_y_labels 여기도 해야함!
+fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, margin: usize) -> Lines {
     let mut labels = Vec::with_capacity(height);
     let y_diff = y_max.sub_rat(y_min);
     let y_label_step = y_diff.div_i32(height as i32);
@@ -551,7 +552,7 @@ fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, interval: 
 
     for y in 0..height {
 
-        if interval > 1 && y % interval != 0 {
+        if margin > 1 && y % margin != 0 {
             labels.push(String::new());
             continue;
         }
@@ -570,7 +571,7 @@ fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, interval: 
 }
 
 // no axis
-fn draw_x_labels<T>(data: &Vec<(String, T)>, width: usize) -> Lines {
+fn draw_x_labels<T>(data: &Vec<(String, T)>, width: usize, margin: usize) -> Lines {
     let mut result = Lines::new(width, 2);
 
     let mut first_line_filled = 0;
@@ -602,11 +603,11 @@ fn draw_x_labels<T>(data: &Vec<(String, T)>, width: usize) -> Lines {
         last_ind = data_ind;
 
         if on_first_line {
-            first_line_filled = x + curr_label.len() + 2;
+            first_line_filled = x + curr_label.len() + margin;
         }
 
         else {
-            second_line_filled = x + curr_label.len() + 2;
+            second_line_filled = x + curr_label.len() + margin;
         }
 
         on_first_line = !on_first_line;
