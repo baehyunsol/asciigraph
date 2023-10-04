@@ -1,5 +1,6 @@
 use hmath::Ratio;
 use crate::alignment::Alignment;
+use crate::interval::{Interval, draw_labeled_intervals};
 use crate::lines::Lines;
 use crate::format::format_ratio;
 use crate::skip_value::SkipValue;
@@ -27,6 +28,8 @@ pub struct Graph {
 
     x_axis_label: Option<String>,
     y_axis_label: Option<String>,
+
+    labeled_intervals: Vec<Interval>,
 
     y_min: Option<Ratio>,
     y_max: Option<Ratio>,
@@ -93,6 +96,7 @@ impl Graph {
     /// 1. `self.data` must be set and for 1-D data, it must not be empty.
     /// 2. If `self.y_min` and `self.y_max` are set, `self.y_max` has to be greater than `self.y_min`.
     /// 3. If you're using a 2-dimensional data, `data`, `x_labels` and `y_labels` must have the same dimension.
+    /// 4. If there're labeled_intervals, their interval must be valid.
     pub fn is_valid(&self) -> bool {
         (match (&self.y_min, &self.y_max) {  // why do I need to wrap it with parenthesis?
             (Some(n), Some(m)) if n.gt_rat(&m) => false,
@@ -118,6 +122,8 @@ impl Graph {
                 x_labels.len() >= x_max && y_labels.len() >= y_max && x_labels.len() == self.plot_width && y_labels.len() == self.plot_height
             }
             _ => false
+        } && {
+            self.labeled_intervals.iter().all(|i| i.is_valid())
         } && {
             // TODO
             true
@@ -327,6 +333,11 @@ impl Graph {
         if let Some(t) = &self.title {
             let title = draw_title(t, self.big_title);
             plot = title.merge_vertically(&plot, Alignment::Center);
+        }
+
+        if !self.labeled_intervals.is_empty() {
+            let arrows = draw_labeled_intervals(&self.labeled_intervals, self.plot_width);
+            plot = plot.merge_vertically(&arrows, Alignment::Last);
         }
 
         plot = plot.add_padding(self.paddings);

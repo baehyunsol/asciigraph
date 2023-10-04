@@ -4,6 +4,7 @@
 mod alignment;
 mod format;
 mod graph;
+mod interval;
 mod lines;
 mod skip_value;
 mod utils;

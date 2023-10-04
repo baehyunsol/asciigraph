@@ -39,6 +39,7 @@ impl Lines {
         self.lines[y][x] = c;
     }
 
+    #[must_use = "method returns a new number and does not mutate the original value"]
     pub fn crop(&self, x: usize, y: usize, w: usize, h: usize) -> Lines {
         let w = w.min(self.width - x);
         let h = h.min(self.height - y);
@@ -53,6 +54,7 @@ impl Lines {
     }
 
     // if you want to blit a fraction of `other`, crop it first
+    #[must_use = "method returns a new number and does not mutate the original value"]
     pub fn blit(&self, other: &Lines, x: usize, y: usize, transparent_char: Option<char>) -> Lines {
         let mut result = self.clone();
 
@@ -80,6 +82,7 @@ impl Lines {
         result
     }
 
+    #[must_use = "method returns a new number and does not mutate the original value"]
     pub fn merge_vertically(&self, other: &Lines, alignment: Alignment) -> Lines {
         let (padding1, padding2) = if self.width >= other.width {
             (0, 0)
@@ -145,6 +148,7 @@ impl Lines {
         }
     }
 
+    #[must_use = "method returns a new number and does not mutate the original value"]
     pub fn merge_horizontally(&self, other: &Lines, alignment: Alignment) -> Lines {
 
         if self.height < other.height {
@@ -259,6 +263,7 @@ impl Lines {
     }
 
     /// top, bottom, left, right
+    #[must_use = "method returns a new number and does not mutate the original value"]
     pub fn add_padding(&self, paddings: [usize; 4]) -> Lines {
         let new_width = self.width + paddings[2] + paddings[3];
 
@@ -283,6 +288,7 @@ impl Lines {
     }
 
     /// top, bottom, left, right
+    #[must_use = "method returns a new number and does not mutate the original value"]
     pub fn add_border(&self, borders: [bool; 4]) -> Lines {
         let mut with_padding = self.add_padding([
             borders[0] as usize,
@@ -407,9 +413,7 @@ impl Lines {
 }
 
 impl std::fmt::Display for Lines {
-
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(fmt, "{}", self.to_string())
     }
-
 }

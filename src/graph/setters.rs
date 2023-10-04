@@ -1,5 +1,6 @@
 use crate::Graph;
 use crate::graph::GraphData;
+use crate::interval::Interval;
 use crate::skip_value::SkipValue;
 use hmath::Ratio;
 
@@ -297,6 +298,12 @@ impl Graph {
         self
     }
 
+    /// See `README.md` to see how it works. `start` and `end` are both inclusive.
+    pub fn add_labeled_interval(&mut self, start: i32, end: i32, label: String) -> &mut Self {
+        self.labeled_intervals.push(Interval::new(start, end, label));
+
+        self
+    }
 }
 
 impl Default for Graph {
@@ -317,6 +324,7 @@ impl Default for Graph {
             skip_value: SkipValue::Automatic,
             x_axis_label: None,
             y_axis_label: None,
+            labeled_intervals: vec![],
             big_title: false
         }
     }
