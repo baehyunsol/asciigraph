@@ -154,7 +154,6 @@ pub fn draw_labeled_intervals(intervals: &Vec<Interval>, graph_width: usize) -> 
     }
 
     let mut result = Lines::new(graph_width, rows.len());
-    println!("{rows:?}");
 
     for (index, row) in rows.iter().enumerate() {
         for interval in row.iter() {
