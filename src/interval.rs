@@ -81,7 +81,7 @@ pub fn draw_labeled_intervals(intervals: &Vec<Interval>, graph_width: usize) -> 
         }
 
         let mut new_mask = vec![false; graph_width];
-        let mut new_row = vec![interval];
+        let new_row = vec![interval];
         push(&mut new_mask, interval);
         masks.push(new_mask);
         rows.push(new_row);
