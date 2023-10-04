@@ -14,7 +14,6 @@ pub struct Interval {
 }
 
 impl Interval {
-    // TODO: make the index correspond with data's coordinate, not the actual rendered plane's coordinate
     pub fn new(start: i32, end: i32, label: String) -> Self {
         Interval {
             start, end, label,
@@ -29,6 +28,12 @@ impl Interval {
         self.end >= self.start
     }
 
+    pub fn label_to_v16(&self) -> Vec<u16> {
+        self.label.encode_utf16().map(
+            |c| c.max(' ' as u16)  // replace newline characters
+        ).collect()
+    }
+
     pub fn adjust_coordinate(&mut self, graph_width: usize, data_size: usize) {
         let start = self.start.max(0).min(data_size as i32 * 2) as usize;
         let end = self.end.max(0).min(data_size as i32 * 2) as usize;
@@ -38,9 +43,7 @@ impl Interval {
     }
 
     pub fn render_full(&self) -> Vec<u16> {
-        let label: Vec<u16> = self.label.encode_utf16().map(
-            |c| c.max(' ' as u16)  // replace newline characters
-        ).collect();
+        let label = self.label_to_v16();
         let len = self.plot_end - self.plot_start + 1;  // inclusive end
 
         if len >= label.len() + 4 {
@@ -78,6 +81,52 @@ impl Interval {
             vec![]
         }
     }
+
+    pub fn render_half(&self, left_side: bool, graph_width: usize) -> Vec<u16> {
+        let mut label = self.label_to_v16();
+
+        // `+1` for inclusive range
+        let len = if left_side {
+            self.plot_end + 1
+        } else {
+            graph_width - self.plot_start
+        };
+
+        if len < label.len() + 2 {
+            if len > 5 {
+                label = vec![
+                    label[..(len - 5)].to_vec(),
+                    vec!['.' as u16; 3],
+                ].concat()
+            }
+
+            else {
+                label = vec![];
+            }
+        }
+
+        let label_len = label.len();
+
+        vec![
+            if left_side {
+                vec![]
+            } else {
+                vec![
+                    vec!['<' as u16],
+                    vec!['─' as u16; len - label_len - 1],
+                ].concat()
+            },
+            label,
+            if left_side {
+                vec![
+                    vec!['─' as u16; len - label_len - 1],
+                    vec!['>' as u16],
+                ].concat()
+            } else {
+                vec![]
+            },
+        ].concat()
+    }
 }
 
 pub fn draw_labeled_intervals(intervals: &Vec<Interval>, graph_width: usize) -> Lines {
@@ -85,7 +134,7 @@ pub fn draw_labeled_intervals(intervals: &Vec<Interval>, graph_width: usize) -> 
     let mut rows = vec![vec![]];
 
     'outer: for interval in intervals.iter() {
-        if interval.start < 0 || interval.plot_end >= graph_width {
+        if interval.end < 0 || interval.plot_start >= graph_width {
             continue;
         }
 
@@ -105,21 +154,26 @@ pub fn draw_labeled_intervals(intervals: &Vec<Interval>, graph_width: usize) -> 
     }
 
     let mut result = Lines::new(graph_width, rows.len());
+    println!("{rows:?}");
 
     for (index, row) in rows.iter().enumerate() {
         for interval in row.iter() {
             if interval.start < 0 {
-                todo!()
+                let i = interval.render_half(true, graph_width);
+                let l = Lines::from_string(&String::from_utf16_lossy(&i), Alignment::First);
+                result = result.blit(&l, 0, index, None);
             }
 
             else if interval.plot_end >= graph_width {
-                todo!()
+                let i = interval.render_half(false, graph_width);
+                let l = Lines::from_string(&String::from_utf16_lossy(&i), Alignment::First);
+                result = result.blit(&l, interval.plot_start, index, None);
             }
 
             else {
                 let i = interval.render_full();
                 let l = Lines::from_string(&String::from_utf16_lossy(&i), Alignment::First);
-                result = result.blit(&l, interval.plot_start as usize, index, None);
+                result = result.blit(&l, interval.plot_start, index, None);
             }
         }
     }
@@ -129,14 +183,14 @@ pub fn draw_labeled_intervals(intervals: &Vec<Interval>, graph_width: usize) -> 
 
 fn can_push(mask: &Vec<bool>, interval: &Interval) -> bool {
     let start = interval.plot_start;
-    let end = interval.plot_end;
+    let end = interval.plot_end.min(mask.len() - 1);
 
     mask[start..(end + 1)].iter().all(|c| !c)
 }
 
 fn push(mask: &mut Vec<bool>, interval: &Interval) {
     let start = interval.plot_start;
-    let end = interval.plot_end;
+    let end = interval.plot_end.min(mask.len() - 1);
 
     for i in start..(end + 1) {
         mask[i] = true;
