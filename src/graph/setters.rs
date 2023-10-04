@@ -21,6 +21,8 @@ impl Graph {
             y_labels: y_labels.clone(),
         };
 
+        self.adjust_all_labeled_intervals();
+
         self
     }
 
@@ -152,6 +154,8 @@ impl Graph {
             y_labels: y_labels.clone(),
         };
 
+        self.adjust_all_labeled_intervals();
+
         self
     }
 
@@ -163,6 +167,8 @@ impl Graph {
         let data: Vec<(String, Ratio)> = data.iter().enumerate().map(|(i, n)| (i.to_string(), n.clone().try_into().unwrap_or(Ratio::zero()))).collect();
 
         self.data = GraphData::Data1D(data);
+        self.adjust_all_labeled_intervals();
+
         self
     }
 
@@ -173,6 +179,8 @@ impl Graph {
         let data: Vec<(String, Ratio)> = data.iter().map(|(label, n)| (label.to_string(), n.clone().try_into().unwrap_or(Ratio::zero()))).collect();
 
         self.data = GraphData::Data1D(data);
+        self.adjust_all_labeled_intervals();
+
         self
     }
 
@@ -206,6 +214,7 @@ impl Graph {
 
     pub fn set_plot_width(&mut self, plot_width: usize) -> &mut Self {
         self.plot_width = plot_width;
+        self.adjust_all_labeled_intervals();
 
         self
     }
@@ -232,6 +241,7 @@ impl Graph {
     /// It only works with 1-dimensional data.
     pub fn set_block_width(&mut self, block_width: usize) -> &mut Self {
         self.block_width = Some(block_width);
+        self.adjust_all_labeled_intervals();
 
         self
     }
@@ -299,8 +309,16 @@ impl Graph {
     }
 
     /// See `README.md` to see how it works. `start` and `end` are both inclusive.
+    /// `start` and `end` corresponds to the index of `self.data`. That means if the interval is (0, 32),
+    /// it's `self.data[0]` ~ `self.data[32]`. The actual number of the characters used depends on the size of the graph.
     pub fn add_labeled_interval(&mut self, start: i32, end: i32, label: String) -> &mut Self {
-        self.labeled_intervals.push(Interval::new(start, end, label));
+        let mut interval = Interval::new(start, end, label);
+
+        if !self.data.is_empty() {
+            interval.adjust_coordinate(self.get_actual_plot_width(), self.data.len());
+        }
+
+        self.labeled_intervals.push(interval);
 
         self
     }

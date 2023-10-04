@@ -53,7 +53,6 @@ enum GraphData {
 }
 
 impl GraphData {
-
     pub fn unwrap_1d(&self) -> &Vec<(String, Ratio)> {
         if let GraphData::Data1D(v) = self {
             v
@@ -70,10 +69,24 @@ impl GraphData {
         }
     }
 
+    pub fn len(&self) -> usize {
+        match self {
+            GraphData::Data1D(data) => data.len(),
+            GraphData::Data2D { data, .. } => data.len(),
+            GraphData::None => 0,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            GraphData::Data1D(data) => data.is_empty(),
+            GraphData::Data2D { data, .. } => data.is_empty(),
+            GraphData::None => true,
+        }
+    }
 }
 
 impl Graph {
-
     pub fn new(plot_width: usize, plot_height: usize) -> Self {
         Graph {
             plot_width,
@@ -82,15 +95,23 @@ impl Graph {
         }
     }
 
-    /// It panics if it's not well-configured. If you're not sure, try `.is_valid` before calling this method
+    /// It panics if it's not well-configured. If you're not sure, call `.is_valid` before calling this method
     pub fn draw(&self) -> String {
-
         match &self.data {
             GraphData::Data1D(_) => self.draw_1d_graph(),
             GraphData::Data2D { .. } => self.draw_2d_graph(),
             GraphData::None => panic!("Cannot draw a graph without any data")
         }
+    }
 
+    pub(crate) fn get_actual_plot_width(&self) -> usize {
+        match &self.data {
+            GraphData::Data1D(_) => match self.block_width {
+                Some(w) => w * self.data.len(),
+                _ => self.plot_width,
+            },
+            _ => self.plot_width,
+        }
     }
 
     /// 1. `self.data` must be set and for 1-D data, it must not be empty.
@@ -133,10 +154,7 @@ impl Graph {
     fn draw_1d_graph(&self) -> String {
         let mut data = self.data.unwrap_1d().clone();
 
-        let plot_width = match &self.block_width {
-            Some(w) => w * data.len(),
-            _ => self.plot_width
-        };
+        let plot_width = self.get_actual_plot_width();
 
         if data.len() > plot_width * 2 {
             data = pick_meaningful_values(&data, plot_width);
@@ -151,7 +169,6 @@ impl Graph {
             _ if self.plot_height <= 18 => None,
             SkipValue::None => None,
             SkipValue::Automatic => {
-
                 if !max_diff.is_zero() && y_max.sub_rat(&y_min).div_rat(&max_diff).lt_i32(3) {
                     let (y_min_, from, to, y_max_, ratio_of_subgraphs_) = get_where_to_skip(data.clone());
                     ratio_of_subgraphs = ratio_of_subgraphs_;
@@ -179,7 +196,6 @@ impl Graph {
                 else {
                     None
                 }
-
             },
             SkipValue::Manual { from, to } => {
                 let mut values_below_skip_range = HashSet::new();
@@ -210,11 +226,9 @@ impl Graph {
         };
 
         if let Some((from, to)) = &skip_range {
-
             if from.lt_rat(&y_min) || to.gt_rat(&y_max) {
                 skip_range = None;
             }
-
         }
 
         let mut plot = match &skip_range {
@@ -319,6 +333,11 @@ impl Graph {
         let x_labels = draw_x_labels(&data, plot_width, self.x_label_margin);
         plot = plot.merge_vertically(&x_labels, Alignment::Last);
 
+        if !self.labeled_intervals.is_empty() {
+            let arrows = draw_labeled_intervals(&self.labeled_intervals, plot_width);
+            plot = plot.merge_vertically(&arrows, Alignment::Last);
+        }
+
         if let Some(xal) = &self.x_axis_label {
             let mut xal = Lines::from_string(xal, Alignment::First);
             xal = xal.add_padding([self.plot_height, 0, 0, 0]);
@@ -335,11 +354,6 @@ impl Graph {
             plot = title.merge_vertically(&plot, Alignment::Center);
         }
 
-        if !self.labeled_intervals.is_empty() {
-            let arrows = draw_labeled_intervals(&self.labeled_intervals, self.plot_width);
-            plot = plot.merge_vertically(&arrows, Alignment::Last);
-        }
-
         plot = plot.add_padding(self.paddings);
 
         plot.to_string()
@@ -349,6 +363,7 @@ impl Graph {
         let (
             data, x_labels, y_labels
         ) = self.data.unwrap_2d();
+
         let mut plot = plot_2d(&data, self.plot_width, self.plot_height);
         plot = plot.add_border([false, true, true, false]);
 
@@ -388,6 +403,16 @@ impl Graph {
         plot.to_string()
     }
 
+    fn adjust_all_labeled_intervals(&mut self) {
+        let plot_width = self.get_actual_plot_width();
+        let data_len = self.data.len();
+
+        if !self.data.is_empty() {
+            self.labeled_intervals.iter_mut().for_each(
+                |i| i.adjust_coordinate(plot_width, data_len)
+            );
+        }
+    }
 }
 
 fn pick_meaningful_values(data: &Vec<(String, Ratio)>, width: usize) -> Vec<(String, Ratio)> {
@@ -746,15 +771,12 @@ fn prettify_y_labels(old_y_min: &Ratio, old_y_max: &Ratio, height: usize, pretty
     else {
         (old_y_min.clone(), old_y_max.clone())
     }
-
 }
 
 use std::fmt;
 
 impl fmt::Display for Graph {
-
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(fmt, "{}", self.draw())
     }
-
 }
