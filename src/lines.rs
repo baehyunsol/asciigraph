@@ -5,21 +5,22 @@ use crate::utils::into_v16;
 pub struct Lines {
     lines: Vec<Vec<u16>>,
     width: usize,
-    height: usize
+    height: usize,
 }
 
 impl Lines {
-
     pub fn new(width: usize, height: usize) -> Self {
         Lines {
             lines: vec![vec![32; width]; height],
-            width, height
+            width, height,
         }
     }
 
     pub fn empty() -> Self {
         Lines {
-            lines: vec![], width: 0, height: 0
+            lines: vec![],
+            width: 0,
+            height: 0,
         }
     }
 
@@ -65,7 +66,6 @@ impl Lines {
         let transparent_char = transparent_char.map(|c| c as u16);
 
         for x_ in x..self.width.min(x + other.width) {
-
             for y_ in y..self.height.min(y + other.height) {
                 let c = other.get(x_ - x, y_ - y);
 
@@ -75,9 +75,7 @@ impl Lines {
 
                 result.set(x_, y_, c);
             }
-
         }
-
 
         result
     }
@@ -94,13 +92,13 @@ impl Lines {
                 ),
                 Alignment::First => (
                     0,
-                    other.width - self.width
+                    other.width - self.width,
                 ),
                 Alignment::Last => (
                     other.width - self.width,
-                    0
+                    0,
                 ),
-                _ => todo!()
+                _ => todo!(),
             }
         };
 
@@ -110,17 +108,17 @@ impl Lines {
             match alignment {
                 Alignment::Center => (
                     (self.width - other.width) / 2 + (self.width - other.width) % 2,
-                    (self.width - other.width) / 2
+                    (self.width - other.width) / 2,
                 ),
                 Alignment::First => (
                     0,
-                    self.width - other.width
+                    self.width - other.width,
                 ),
                 Alignment::Last => (
                     self.width - other.width,
                     0
                 ),
-                _ => todo!()
+                _ => todo!(),
             }
         };
 
@@ -129,14 +127,14 @@ impl Lines {
                 |line| vec![
                     vec![32; padding1],
                     line.to_vec(),
-                    vec![32; padding2]
+                    vec![32; padding2],
                 ].concat()
             ).collect::<Vec<Vec<u16>>>(),
             other.lines.iter().map(
                 |line| vec![
                     vec![32; padding3],
                     line.to_vec(),
-                    vec![32; padding4]
+                    vec![32; padding4],
                 ].concat()
             ).collect(),
         ].concat();
@@ -144,13 +142,12 @@ impl Lines {
         Lines {
             lines: new_lines,
             width: self.width.max(other.width),
-            height: self.height + other.height
+            height: self.height + other.height,
         }
     }
 
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub fn merge_horizontally(&self, other: &Lines, alignment: Alignment) -> Lines {
-
         if self.height < other.height {
             let (padding1, padding2) = match alignment {
                 Alignment::First => (0, other.height - self.height),
@@ -159,7 +156,7 @@ impl Lines {
                     (other.height - self.height) / 2 + (other.height - self.height) % 2,
                     (other.height - self.height) / 2,
                 ),
-                _ => todo!()
+                _ => todo!(),
             };
             let mut new_lines = Vec::with_capacity(other.height);
             let mut index = 0;
@@ -167,7 +164,7 @@ impl Lines {
             for _ in 0..padding1 {
                 new_lines.push(vec![
                     vec![32; self.width],
-                    other.lines[index].clone()
+                    other.lines[index].clone(),
                 ].concat());
 
                 index += 1;
@@ -176,7 +173,7 @@ impl Lines {
             for _ in 0..self.height {
                 new_lines.push(vec![
                     self.lines[index - padding1].clone(),
-                    other.lines[index].clone()
+                    other.lines[index].clone(),
                 ].concat());
 
                 index += 1;
@@ -185,7 +182,7 @@ impl Lines {
             for _ in 0..padding2 {
                 new_lines.push(vec![
                     vec![32; self.width],
-                    other.lines[index].clone()
+                    other.lines[index].clone(),
                 ].concat());
 
                 index += 1;
@@ -194,7 +191,7 @@ impl Lines {
             Lines {
                 lines: new_lines,
                 width: self.width + other.width,
-                height: other.height
+                height: other.height,
             }
         }
 
@@ -202,14 +199,14 @@ impl Lines {
             let new_lines = (0..self.height).map(
                 |i| vec![
                     self.lines[i].clone(),
-                    other.lines[i].clone()
+                    other.lines[i].clone(),
                 ].concat()
             ).collect();
 
             Lines {
                 lines: new_lines,
                 width: self.width + other.width,
-                height: self.height
+                height: self.height,
             }
         }
 
@@ -221,7 +218,7 @@ impl Lines {
                     (self.height - other.height) / 2 + (self.height - other.height) % 2,
                     (self.height - other.height) / 2,
                 ),
-                _ => todo!()
+                _ => todo!(),
             };
             let mut new_lines = Vec::with_capacity(self.height);
             let mut index = 0;
@@ -238,7 +235,7 @@ impl Lines {
             for _ in 0..other.height {
                 new_lines.push(vec![
                     self.lines[index].clone(),
-                    other.lines[index - padding1].clone()
+                    other.lines[index - padding1].clone(),
                 ].concat());
 
                 index += 1;
@@ -256,10 +253,9 @@ impl Lines {
             Lines {
                 lines: new_lines,
                 width: self.width + other.width,
-                height: self.height
+                height: self.height,
             }
         }
-
     }
 
     /// top, bottom, left, right
@@ -283,7 +279,7 @@ impl Lines {
         Lines {
             lines: new_lines,
             width: new_width,
-            height: self.height + paddings[0] + paddings[1]
+            height: self.height + paddings[0] + paddings[1],
         }
     }
 
@@ -298,35 +294,27 @@ impl Lines {
         ]);
 
         if borders[0] {
-
             for x in 0..with_padding.width {
                 with_padding.set(x, 0, '─' as u16);
             }
-
         }
 
         if borders[1] {
-
             for x in 0..with_padding.width {
                 with_padding.set(x, with_padding.height - 1, '─' as u16);
             }
-
         }
 
         if borders[2] {
-
             for y in 0..with_padding.height {
                 with_padding.set(0, y, '│' as u16);
             }
-
         }
 
         if borders[3] {
-
             for y in 0..with_padding.height {
                 with_padding.set(with_padding.width - 1, y, '│' as u16);
             }
-
         }
 
         if borders[0] && borders[2] {
@@ -377,13 +365,13 @@ impl Lines {
                 ),
                 Alignment::First => (
                     0,
-                    max_width - raw_line.len()
+                    max_width - raw_line.len(),
                 ),
                 Alignment::Last => (
                     max_width - raw_line.len(),
-                    0
+                    0,
                 ),
-                _ => todo!()
+                _ => todo!(),
             };
 
             result.push(

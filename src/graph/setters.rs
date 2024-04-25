@@ -41,111 +41,107 @@ impl Graph {
         let mut data = Vec::with_capacity(data.len() / 2);
 
         for x in 0..self.plot_width {
-
             for y in 0..self.plot_height {
-
                 match (
                     grid[y * 2][x * 2], grid[y * 2][x * 2 + 1],
                     grid[y * 2 + 1][x * 2], grid[y * 2 + 1][x * 2 + 1],
                 ) {
                     (
                         true, true,
-                        true, true
+                        true, true,
                     ) => {
                         data.push((x, y, '█' as u16));
-                    }
+                    },
                     (
                         true, true,
-                        true, false
+                        true, false,
                     ) => {
                         data.push((x, y, '▛' as u16));
-                    }
+                    },
                     (
                         true, true,
-                        false, true
+                        false, true,
                     ) => {
                         data.push((x, y, '▜' as u16));
-                    }
+                    },
                     (
                         true, true,
-                        false, false
+                        false, false,
                     ) => {
                         data.push((x, y, '▀' as u16));
-                    }
+                    },
                     (
                         true, false,
-                        true, true
+                        true, true,
                     ) => {
                         data.push((x, y, '▙' as u16));
-                    }
+                    },
                     (
                         true, false,
-                        true, false
+                        true, false,
                     ) => {
                         data.push((x, y, '▌' as u16));
-                    }
+                    },
                     (
                         true, false,
-                        false, true
+                        false, true,
                     ) => {
                         data.push((x, y, '▚' as u16));
-                    }
+                    },
                     (
                         true, false,
-                        false, false
+                        false, false,
                     ) => {
                         data.push((x, y, '▘' as u16));
-                    }
+                    },
                     (
                         false, true,
-                        true, true
+                        true, true,
                     ) => {
                         data.push((x, y, '▟' as u16));
-                    }
+                    },
                     (
                         false, true,
-                        true, false
+                        true, false,
                     ) => {
                         data.push((x, y, '▞' as u16));
-                    }
+                    },
                     (
                         false, true,
-                        false, true
+                        false, true,
                     ) => {
                         data.push((x, y, '▐' as u16));
-                    }
+                    },
                     (
                         false, true,
-                        false, false
+                        false, false,
                     ) => {
                         data.push((x, y, '▝' as u16));
-                    }
+                    },
                     (
                         false, false,
-                        true, true
+                        true, true,
                     ) => {
                         data.push((x, y, '▄' as u16));
-                    }
+                    },
                     (
                         false, false,
-                        true, false
+                        true, false,
                     ) => {
                         data.push((x, y, '▖' as u16));
-                    }
+                    },
                     (
                         false, false,
-                        false, true
+                        false, true,
                     ) => {
                         data.push((x, y, '▗' as u16));
-                    }
+                    },
                     (
                         false, false,
-                        false, false
-                    ) => { }
+                        false, false,
+                    ) => { },
                 }
-
             }
-
         }
 
         self.data = GraphData::Data2D {
@@ -325,7 +321,6 @@ impl Graph {
 }
 
 impl Default for Graph {
-
     fn default() -> Self {
         Graph {
             plot_width: 80,
@@ -343,8 +338,7 @@ impl Default for Graph {
             x_axis_label: None,
             y_axis_label: None,
             labeled_intervals: vec![],
-            big_title: false
+            big_title: false,
         }
     }
-
 }

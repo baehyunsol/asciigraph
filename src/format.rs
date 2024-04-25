@@ -1,7 +1,6 @@
 use hmath::{Ratio, BigInt};
 
 pub fn format_ratio(n: &Ratio) -> String {
-
     if n.abs().lt_rat(&THOUSAND) {
         n.to_approx_string(8)
     }
@@ -16,9 +15,7 @@ pub fn format_ratio(n: &Ratio) -> String {
         else {
             bi.to_scientific_notation(4)
         }
-
     }
-
 }
 
 lazy_static::lazy_static! {

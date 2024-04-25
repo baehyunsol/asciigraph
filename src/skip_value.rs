@@ -4,7 +4,7 @@ use hmath::Ratio;
 pub enum SkipValue {
     None,
     Automatic,
-    Manual { from: Ratio, to: Ratio }
+    Manual { from: Ratio, to: Ratio },
 }
 
 impl SkipValue {
@@ -31,12 +31,9 @@ impl SkipValue {
     }
 
     pub(crate) fn is_automatic(&self) -> bool {
-
         match self {
             SkipValue::Automatic => true,
-            _ => false
+            _ => false,
         }
-
     }
-
 }

@@ -49,7 +49,7 @@ enum GraphData {
         x_labels: Vec<Option<String>>,
         y_labels: Vec<Option<String>>,
     },
-    None
+    None,
 }
 
 impl GraphData {
@@ -100,7 +100,7 @@ impl Graph {
         match &self.data {
             GraphData::Data1D(_) => self.draw_1d_graph(),
             GraphData::Data2D { .. } => self.draw_2d_graph(),
-            GraphData::None => panic!("Cannot draw a graph without any data")
+            GraphData::None => panic!("Cannot draw a graph without any data"),
         }
     }
 
@@ -141,8 +141,8 @@ impl Graph {
                 }
 
                 x_labels.len() >= x_max && y_labels.len() >= y_max && x_labels.len() == self.plot_width && y_labels.len() == self.plot_height
-            }
-            _ => false
+            },
+            _ => false,
         } && {
             self.labeled_intervals.iter().all(|i| i.is_valid())
         } && {
@@ -222,7 +222,7 @@ impl Graph {
                 }
 
                 Some((from.clone(), to.clone()))
-            }
+            },
         };
 
         if let Some((from, to)) = &skip_range {
@@ -253,7 +253,7 @@ impl Graph {
                 let y_labels = draw_y_labels_1d_plot(&y_min, &y_max, self.plot_height, self.y_label_margin);
 
                 y_labels.merge_horizontally(&plot, Alignment::First)
-            }
+            },
             Some((from, to)) => {
                 let (mut height1, mut height2) = (
                     self.plot_height * ratio_of_subgraphs.0 / 6,
@@ -327,7 +327,7 @@ impl Graph {
                 plot1 = horizontal_line.merge_vertically(&plot1, Alignment::First);
 
                 plot2.merge_vertically(&plot1, Alignment::First)
-            }
+            },
         };
 
         let x_labels = draw_x_labels(&data, plot_width, self.x_label_margin);
@@ -430,7 +430,6 @@ fn pick_meaningful_values(data: &Vec<(String, Ratio)>, width: usize) -> Vec<(Str
         let mut max_val = &data[last_ind].1;
 
         for (ind, (_, val)) in data[last_ind..curr_ind].iter().enumerate() {
-
             if val.gt_rat(&max_val) {
                 max_ind = ind;
                 max_val = val;
@@ -440,7 +439,6 @@ fn pick_meaningful_values(data: &Vec<(String, Ratio)>, width: usize) -> Vec<(Str
                 min_ind = ind;
                 min_val = val;
             }
-
         }
 
         if min_ind < max_ind {
@@ -502,7 +500,7 @@ fn get_where_to_skip(mut data: Vec<(String, Ratio)>) -> (Ratio, Ratio, Ratio, Ra
         data[curr_max_diff_ind].1.add_rat(&padding1),
         data[curr_max_diff_ind + 1].1.sub_rat(&padding2),
         data[data.len() - 1].1.add_rat(&padding2),
-        ratio_of_subgraphs
+        ratio_of_subgraphs,
     )
 }
 
@@ -519,12 +517,11 @@ fn unwrap_y_min_max(self_y_min: &Option<Ratio>, self_y_max: &Option<Ratio>, data
         } else {
             (n.sub_i32(1), n.clone())
         },
-        (None, None) => (data_min.clone(), data_max.clone())
+        (None, None) => (data_min.clone(), data_max.clone()),
     }
 }
 
 fn get_min_max_diff(v: &Vec<(String, Ratio)>, height: usize) -> (Ratio, Ratio, Ratio) {  // (y_min, y_max, max_diff)
-
     if v.len() == 0 {
         return (Ratio::zero(), Ratio::one(), Ratio::zero());
     }
@@ -542,7 +539,6 @@ fn get_min_max_diff(v: &Vec<(String, Ratio)>, height: usize) -> (Ratio, Ratio, R
         if diff.gt_rat(&max_diff) {
             max_diff = diff;
         }
-
     }
 
     let mut diff = curr_max.sub_rat(curr_min).div_i32(16);
@@ -558,7 +554,6 @@ fn get_min_max_diff(v: &Vec<(String, Ratio)>, height: usize) -> (Ratio, Ratio, R
 }
 
 fn draw_title(title: &str, big_title: bool) -> Lines {
-
     if big_title {
         Lines::from_string(&asciibox::render_string(title, asciibox::RenderOption::default()), Alignment::First)
     }
@@ -566,7 +561,6 @@ fn draw_title(title: &str, big_title: bool) -> Lines {
     else {
         Lines::from_string(title, Alignment::Center)
     }
-
 }
 
 // no axis
@@ -574,7 +568,7 @@ fn draw_y_labels_2d_plot(y_labels: &Vec<Option<String>>) -> Lines {
     Lines::from_string(&y_labels.iter().map(
         |s| match s {
             Some(s) => s.replace("\n", " "),
-            _ => String::new()
+            _ => String::new(),
         }
     ).collect::<Vec<String>>().join("\n"), Alignment::Last)
 }
@@ -587,7 +581,6 @@ fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, margin: us
     let mut curr_max_width = 0;
 
     for y in 0..height {
-
         if margin > 1 && y % margin != 0 {
             labels.push(String::new());
             continue;
@@ -657,7 +650,6 @@ fn plot_2d(data: &Vec<(usize, usize, u16)>, width: usize, height: usize) -> Line
     let mut result = Lines::new(width, height);
 
     for (x, y, c) in data.iter() {
-
         if *c == '\n' as u16 {
             result.set(*x, *y, 32);
         }
@@ -665,7 +657,6 @@ fn plot_2d(data: &Vec<(usize, usize, u16)>, width: usize, height: usize) -> Line
         else {
             result.set(*x, *y, *c);
         }
-
     }
 
     result
@@ -711,7 +702,7 @@ fn plot_1d(data: &Vec<(String, Ratio)>, width: usize, height: usize, y_min: &Rat
                 '█' as u16,
                 '▆' as u16,
                 '▄' as u16,
-                '▂' as u16
+                '▂' as u16,
             ][block_type])
         }
 
@@ -726,9 +717,7 @@ fn plot_1d(data: &Vec<(String, Ratio)>, width: usize, height: usize, y_min: &Rat
 // it works when both y_min and y_max are movable
 // -> in order to make all the labels pretty, both end(start) point and interval have to be modified
 fn prettify_y_labels(old_y_min: &Ratio, old_y_max: &Ratio, height: usize, pretty_y_label_info: Option<(bool, bool, Ratio)>) -> (Ratio, Ratio) {
-
     if let Some((y_min_movable, y_max_movable, interval)) = pretty_y_label_info {
-
         if !y_max_movable || (!y_min_movable && !old_y_min.div_rat(&interval).is_integer()) {
             (old_y_min.clone(), old_y_max.clone())
         }
@@ -743,7 +732,6 @@ fn prettify_y_labels(old_y_min: &Ratio, old_y_max: &Ratio, height: usize, pretty
             let should_be_multiple_of_16 = curr_interval.div_rat(&interval).mul_i32(16).round_bi();
 
             if let Ok(n) = should_be_multiple_of_16.to_i32() {
-
                 if n < 15 || (17 < n && n < 30)
                     || (34 < n && n < 45)
                     || (51 < n && n < 60)
