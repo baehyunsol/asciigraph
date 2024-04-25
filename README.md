@@ -69,7 +69,7 @@ fn main() {
 
                 1200 < d && d < 2000
             }
-        ).collect::<Vec<(usize, usize)>>(),
+        ).collect::<Vec<_>>(),
         &vec![None; 52],
         &vec![None; 26],
     );
@@ -122,7 +122,7 @@ fn main() {
 
                 (x.to_string(), Ratio::try_from(y).unwrap())
             }
-        ).collect())
+        ).collect::<Vec<_>>())
         .set_y_max("1.2")
         .set_y_min("-1.2")
         .add_labeled_interval(0, 31415, "first pi".to_string())

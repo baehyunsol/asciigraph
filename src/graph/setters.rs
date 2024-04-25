@@ -9,7 +9,7 @@ impl Graph {
     /// It plots characters on a 2-dimensional plane. The type of `data` is `Vec<(x, y, character)>`.
     /// The sizes of `x_labels` and `y_labels` must match `self.plot_width` and `self.plot_height`.
     /// If `self.plot_width` and `self.plot_height` are already set, it updates them.
-    pub fn set_2d_data(&mut self, data: &Vec<(usize, usize, char)>, x_labels: &Vec<Option<String>>, y_labels: &Vec<Option<String>>) -> &mut Self {
+    pub fn set_2d_data(&mut self, data: &[(usize, usize, char)], x_labels: &[Option<String>], y_labels: &[Option<String>]) -> &mut Self {
         self.plot_width = x_labels.len();
         self.plot_height = y_labels.len();
 
@@ -17,8 +17,8 @@ impl Graph {
             data: data.iter().map(|(x, y, c)| (
                 *x, *y, *c as u16
             )).collect(),
-            x_labels: x_labels.clone(),
-            y_labels: y_labels.clone(),
+            x_labels: x_labels.to_vec(),
+            y_labels: y_labels.to_vec(),
         };
 
         self.adjust_all_labeled_intervals();
@@ -28,7 +28,7 @@ impl Graph {
 
     /// It's like `set_2d_data`, but has twice higher resolution. You cannot set characters, you can only plot dots.
     /// That means the width and the height of `data` has to be twice of that of `x_labels` and `y_labels`.
-    pub fn set_2d_data_high_resolution(&mut self, data: &Vec<(usize, usize)>, x_labels: &Vec<Option<String>>, y_labels: &Vec<Option<String>>) -> &mut Self {
+    pub fn set_2d_data_high_resolution(&mut self, data: &[(usize, usize)], x_labels: &[Option<String>], y_labels: &[Option<String>]) -> &mut Self {
         self.plot_width = x_labels.len();
         self.plot_height = y_labels.len();
         let mut grid = vec![vec![false; self.plot_width * 2]; self.plot_height * 2];
@@ -146,8 +146,8 @@ impl Graph {
 
         self.data = GraphData::Data2D {
             data,
-            x_labels: x_labels.clone(),
-            y_labels: y_labels.clone(),
+            x_labels: x_labels.to_vec(),
+            y_labels: y_labels.to_vec(),
         };
 
         self.adjust_all_labeled_intervals();
@@ -157,7 +157,7 @@ impl Graph {
 
     /// `T` can be any number type, including f32 and f64. NaN is converted to 0, -Inf is converted to f32::MIN and Inf to f32::MAX (or f64).\
     /// The data is labeled using indices (from 0).
-    pub fn set_1d_data<T: TryInto<Ratio> + Clone>(&mut self, data: &Vec<T>) -> &mut Self {
+    pub fn set_1d_data<T: TryInto<Ratio> + Clone>(&mut self, data: &[T]) -> &mut Self {
 
         // in order for `String`s to be `T`, it has to clone n inside the `map` method.
         let data: Vec<(String, Ratio)> = data.iter().enumerate().map(|(i, n)| (i.to_string(), n.clone().try_into().unwrap_or(Ratio::zero()))).collect();
@@ -169,7 +169,7 @@ impl Graph {
     }
 
     /// `T` can be any number type, including f32 and f64. NaN is converted to 0, -Inf is converted to f32::MIN and Inf to f32::MAX (or f64).\
-    pub fn set_1d_labeled_data<T: TryInto<Ratio> + Clone>(&mut self, data: &Vec<(String, T)>) -> &mut Self {
+    pub fn set_1d_labeled_data<T: TryInto<Ratio> + Clone>(&mut self, data: &[(String, T)]) -> &mut Self {
 
         // in order for `String`s to be `T`, it has to clone n inside the `map` method.
         let data: Vec<(String, Ratio)> = data.iter().map(|(label, n)| (label.to_string(), n.clone().try_into().unwrap_or(Ratio::zero()))).collect();
