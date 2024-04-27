@@ -221,14 +221,14 @@ impl Graph {
         self
     }
 
-    pub fn set_y_label_margin(&mut self, y_label_margin: usize) -> &mut Self {
-        self.y_label_margin = y_label_margin;
+    pub fn set_x_label_margin(&mut self, x_label_margin: usize) -> &mut Self {
+        self.x_label_margin = x_label_margin;
 
         self
     }
 
-    pub fn set_x_label_margin(&mut self, x_label_margin: usize) -> &mut Self {
-        self.x_label_margin = x_label_margin;
+    pub fn set_y_label_margin(&mut self, y_label_margin: usize) -> &mut Self {
+        self.y_label_margin = y_label_margin;
 
         self
     }

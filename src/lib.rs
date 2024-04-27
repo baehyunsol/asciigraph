@@ -9,6 +9,9 @@ mod lines;
 mod skip_value;
 mod utils;
 
+#[cfg(feature = "json")]
+mod json;
+
 pub use graph::Graph;
 
 pub use alignment::Alignment;
