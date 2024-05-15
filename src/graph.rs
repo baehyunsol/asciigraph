@@ -38,7 +38,9 @@ pub struct Graph {
 
     pretty_y: Option<Ratio>,
 
+    // see comments in setters
     skip_value: SkipValue,
+    skip_skip_range: Option<(Option<Ratio>, Option<Ratio>)>,
 
     paddings: [usize; 4],
 
@@ -187,15 +189,44 @@ impl Graph {
                         y_max = y_max_;
                     }
 
-                    // if the explicitly set y_min and y_max are not compatible with the skipped range, it doesn't skip
-                    if y_min.lt_rat(&from) && to.lt_rat(&y_max) {
+                    let respect_skip_skip_range = if let Some((skip_skip_from, skip_skip_to)) = &self.skip_skip_range {
+                        match (skip_skip_from, skip_skip_to) {
+                            (Some(skip_skip_from), Some(skip_skip_to)) => if skip_skip_from.lt_rat(&from) && skip_skip_to.gt_rat(&to) {
+                                None
+                            } else {
+                                Some((from, to))
+                            },
+                            (None, Some(skip_skip_to)) => if skip_skip_to.gt_rat(&to) {
+                                None
+                            } else {
+                                Some((from, to))
+                            },
+                            (Some(skip_skip_from), None) => if skip_skip_from.lt_rat(&from) {
+                                None
+                            } else {
+                                Some((from, to))
+                            },
+                            // skip_skip_range is (inf, inf), which includes all the numbers
+                            (None, None) => None,
+                        }
+                    } else {
                         Some((from, to))
+                    };
+
+                    if let Some((from, to)) = respect_skip_skip_range {
+                        // if the explicitly set y_min and y_max are not compatible with the skipped range, it doesn't skip
+                        if y_min.lt_rat(&from) && to.lt_rat(&y_max) {
+                            Some((from, to))
+                        }
+
+                        else {
+                            None
+                        }
                     }
 
                     else {
                         None
                     }
-
                 }
 
                 else {

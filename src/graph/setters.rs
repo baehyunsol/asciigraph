@@ -311,6 +311,19 @@ impl Graph {
         self
     }
 
+    /// I need a better name for this.
+    ///
+    /// If the skip_range is included in this range, the skip_range is not set. It works only when its skip_value is `SkipValue::Automatic`.
+    /// You can set open ends with `None` values.
+    pub fn set_skip_skip_range<T: TryInto<Ratio> + Clone, U: TryInto<Ratio> + Clone>(&mut self, from: Option<T>, to: Option<U>) -> &mut Self {
+        self.skip_skip_range = Some((
+            from.map(|n| n.clone().try_into().unwrap_or(Ratio::zero())),
+            to.map(|n| n.clone().try_into().unwrap_or(Ratio::zero())),
+        ));
+
+        self
+    }
+
     /// See `README.md` to see how it works. `start` and `end` are both inclusive.
     /// `start` and `end` corresponds to the index of `self.data`. That means if the interval is (0, 32),
     /// it's `self.data[0]` ~ `self.data[32]`. The actual number of the characters used depends on the size of the graph.
@@ -355,6 +368,7 @@ impl Default for Graph {
             title: None,
             title_color: None,
             skip_value: SkipValue::Automatic,
+            skip_skip_range: None,
             x_axis_label: None,
             y_axis_label: None,
             labeled_intervals: vec![],
