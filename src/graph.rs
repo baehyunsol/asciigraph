@@ -42,6 +42,8 @@ pub struct Graph {
     skip_value: SkipValue,
     skip_skip_range: Option<(Option<Ratio>, Option<Ratio>)>,
 
+    horizontal_break: Option<(usize, usize)>,
+
     paddings: [usize; 4],
 
     color_mode: ColorMode,
@@ -267,6 +269,8 @@ impl Graph {
             }
         }
 
+        let mut y_labels_len;
+
         let mut plot = match &skip_range {
             None => {
                 let (y_min, y_max) = prettify_y_labels(
@@ -288,6 +292,7 @@ impl Graph {
                 plot = plot.add_border([false, true, true, false]);
 
                 let y_labels = draw_y_labels_1d_plot(&y_min, &y_max, self.plot_height, self.y_label_margin);
+                y_labels_len = y_labels.get_width();
 
                 y_labels.merge_horizontally(&plot, Alignment::First)
             },
@@ -358,6 +363,7 @@ impl Graph {
                     y_labels2 = y_labels2.add_padding([0, 0, y_labels1.get_width() - y_labels2.get_width(), 0]);
                 }
 
+                y_labels_len = y_labels1.get_width();
                 plot1 = y_labels1.merge_horizontally(&plot1, Alignment::First);
                 plot2 = y_labels2.merge_horizontally(&plot2, Alignment::First);
 
@@ -376,6 +382,17 @@ impl Graph {
         if !self.labeled_intervals.is_empty() {
             let arrows = draw_labeled_intervals(&self.labeled_intervals, plot_width);
             plot = plot.merge_vertically(&arrows, Alignment::Last);
+        }
+
+        if let Some((from, to)) = self.horizontal_break {
+            let plot_width = plot.get_width();
+            let plot_height = plot.get_height();
+            let left_half = plot.crop(0, 0, y_labels_len + from, plot_height);
+            let right_half = plot.crop(y_labels_len + to, 0, plot_width - y_labels_len - to, plot_height);
+            let break_line = draw_vertial_line(plot_height, self.primary_color.clone());
+
+            plot = left_half.merge_horizontally(&break_line, Alignment::Last);
+            plot = plot.merge_horizontally(&right_half, Alignment::Last);
         }
 
         if let Some(xal) = &self.x_axis_label {
@@ -808,6 +825,25 @@ fn prettify_y_labels(old_y_min: &Ratio, old_y_max: &Ratio, height: usize, pretty
     else {
         (old_y_min.clone(), old_y_max.clone())
     }
+}
+
+fn draw_vertial_line(height: usize, color: Option<Color>) -> Lines {
+    let mut result = Lines::new(2, height);
+    result.set_color_all(color);
+
+    for i in 0..height {
+        if i & 1 == 0 {
+            result.set(0, i, ')' as u16);
+            result.set(1, i, ')' as u16);
+        }
+
+        else {
+            result.set(0, i, '(' as u16);
+            result.set(1, i, '(' as u16);
+        }
+    }
+
+    result
 }
 
 use std::fmt;

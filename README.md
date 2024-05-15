@@ -116,23 +116,39 @@ fn main() {
     println!("{g9}");
 
     let mut g10 = Graph::new(72, 24);
-    g10.set_1d_labeled_data(&(0..62832).map(
+    g10.set_1d_labeled_data(
+        &(0..62832).map(
             |i| {
                 let x = i as f64 / 10000.0;
                 let y = x.sin();
 
                 (x.to_string(), Ratio::try_from(y).unwrap())
             }
-        ).collect::<Vec<_>>())
-        .set_y_max("1.2")
-        .set_y_min("-1.2")
-        .add_labeled_interval(0, 31415, "first pi".to_string())
-        .add_labeled_interval(31416, 62831, "second pi".to_string())
-        .add_labeled_interval(0, 62831, "two pi".to_string())
-        .add_labeled_interval(0, 3000, "small interval".to_string())
-        .add_labeled_interval(1200, 9000, "small interval2".to_string());
+        ).collect::<Vec<_>>()
+    )
+    .set_y_max("1.2")
+    .set_y_min("-1.2")
+    .add_labeled_interval(0, 31415, "first pi")
+    .add_labeled_interval(31416, 62831, "second pi")
+    .add_labeled_interval(0, 62831, "two pi")
+    .add_labeled_interval(0, 3000, "small interval")
+    .add_labeled_interval(1200, 9000, "small interval2");
 
     println!("{g10}");
+
+    let mut g11 = Graph::new(72, 24);
+    g11.set_1d_labeled_data(&vec![
+        ("zero".to_string(), 0), ("zero".to_string(), 0), ("zero".to_string(), 0), ("zero".to_string(), 0),
+        ("zero".to_string(), 0), ("zero".to_string(), 0), ("zero".to_string(), 0), ("zero".to_string(), 0),
+        ("zero".to_string(), 0), ("zero".to_string(), 0), ("zero".to_string(), 0), ("zero".to_string(), 0),
+        ("five".to_string(), 5), ("nine".to_string(), 9), ("four".to_string(), 4), ("ten".to_string(), 10),
+        ("zero".to_string(), 0), ("zero".to_string(), 0), ("zero".to_string(), 0), ("zero".to_string(), 0),
+    ])
+    .set_title("hello")
+    .set_skip_range(SkipValue::None)
+    .set_horizontal_break(12, 36);
+
+    println!("{g11}");
 }
 ```
 
@@ -382,5 +398,33 @@ fn main() {
      <─────────────first pi─────────────><────────────second pi─────────────>
      <────────────────────────────────two pi────────────────────────────────>
      <──>                                                                    
-      <─sma...─>                                                     
+      <─sma...─>                                                             
+                         hello                         
+11.5│           ))                                     
+    │           ((                                     
+10.5│           ))                                     
+    │           ((                   ████              
+ 9.5│           ))                   ████              
+    │           ((            ████   ████              
+ 8.5│           ))            ████   ████              
+    │           ((            ████   ████              
+ 7.5│           ))            ████   ████              
+    │           ((            ████   ████              
+ 6.5│           ))            ████   ████              
+    │           ((            ████   ████              
+ 5.5│           ))            ████   ████              
+    │           ((         ███████   ████              
+ 4.5│           ))         ███████   ████              
+    │           ((         ██████████████              
+ 3.5│           ))         ██████████████              
+    │           ((         ██████████████              
+ 2.5│           ))         ██████████████              
+    │           ((         ██████████████              
+ 1.5│           ))         ██████████████              
+    │           ((         ██████████████              
+ 0.5│           ))         ██████████████              
+    │███████████((█████████████████████████████████████
+    ╰───────────))─────────────────────────────────────
+     zero    zer(( zero    five   four   zero   zero   
+         zero   ))ro   zero   nine   ten     zero      
 ```

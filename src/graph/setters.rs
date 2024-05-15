@@ -274,7 +274,7 @@ impl Graph {
         self
     }
 
-    pub fn set_title(&mut self, title: &str) -> &mut Self {
+    pub fn set_title<T: ToString>(&mut self, title: T) -> &mut Self {
         self.title = Some(title.to_string());
 
         self
@@ -286,13 +286,13 @@ impl Graph {
         self
     }
 
-    pub fn set_x_axis_label(&mut self, x_axis_label: &str) -> &mut Self {
+    pub fn set_x_axis_label<T: ToString>(&mut self, x_axis_label: T) -> &mut Self {
         self.x_axis_label = Some(x_axis_label.to_string());
 
         self
     }
 
-    pub fn set_y_axis_label(&mut self, y_axis_label: &str) -> &mut Self {
+    pub fn set_y_axis_label<T: ToString>(&mut self, y_axis_label: T) -> &mut Self {
         self.y_axis_label = Some(y_axis_label.to_string());
 
         self
@@ -324,11 +324,19 @@ impl Graph {
         self
     }
 
+    /// `from` and `to` are x indices of the output plot.
+    /// It's like skip_range, but it skips x-axis not y-axis.
+    pub fn set_horizontal_break(&mut self, from: usize, to: usize) -> &mut Self {
+        self.horizontal_break = Some((from, to));
+
+        self
+    }
+
     /// See `README.md` to see how it works. `start` and `end` are both inclusive.
     /// `start` and `end` corresponds to the index of `self.data`. That means if the interval is (0, 32),
     /// it's `self.data[0]` ~ `self.data[32]`. The actual number of the characters used depends on the size of the graph.
-    pub fn add_labeled_interval(&mut self, start: i32, end: i32, label: String) -> &mut Self {
-        let mut interval = Interval::new(start, end, label);
+    pub fn add_labeled_interval<T: ToString>(&mut self, start: i32, end: i32, label: T) -> &mut Self {
+        let mut interval = Interval::new(start, end, label.to_string());
 
         if !self.data.is_empty() {
             interval.adjust_coordinate(self.get_actual_plot_width(), self.data.len());
@@ -369,6 +377,7 @@ impl Default for Graph {
             title_color: None,
             skip_value: SkipValue::Automatic,
             skip_skip_range: None,
+            horizontal_break: None,
             x_axis_label: None,
             y_axis_label: None,
             labeled_intervals: vec![],
