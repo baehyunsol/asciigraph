@@ -52,10 +52,16 @@ impl Color {
                     buffer.push(ch);
                 }
             },
-            ColorMode::Terminal => {
+            ColorMode::TerminalFg
+            | ColorMode::TerminalBg => {
                 let (r, g, b) = self.get_rgb();
+                let head = if let ColorMode::TerminalFg = color_mode {
+                    "38"
+                } else {
+                    "48"
+                };
 
-                for ch in format!("\x1b[38;2;{r};{g};{b}m").chars() {
+                for ch in format!("\x1b[{head};2;{r};{g};{b}m").chars() {
                     buffer.push(ch);
                 }
             },
@@ -70,8 +76,13 @@ impl Color {
                     buffer.push(ch);
                 }
             },
-            ColorMode::Terminal => {
+            ColorMode::TerminalFg => {
                 for ch in "\x1b[39m".chars() {
+                    buffer.push(ch);
+                }
+            },
+            ColorMode::TerminalBg => {
+                for ch in "\x1b[49m".chars() {
                     buffer.push(ch);
                 }
             },
@@ -87,14 +98,10 @@ pub enum ColorMode {
     /// `<span class="{prefix}red">`
     Html { prefix: String },
 
-    // in python,
-    // print('\033[38;2;255;82;197mHello\033[39m')
-    // `[38` to change foreground color,
-    // `[48` for background
-    // `[39` to reset foreground and `[49` for background
     // https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
     /// https://en.wikipedia.org/wiki/ANSI_escape_code
-    Terminal,
+    TerminalFg,
+    TerminalBg,
 }
 
 impl ColorMode {

@@ -522,8 +522,8 @@ impl std::fmt::Display for Lines {
 enum AnsiEscapeParseState {
     None,
     Esc0,  // encountered `\x1b', expecting '['
-    Esc1,  // encountered '[', expecting '3'
-    Esc2,  // encountered '3', expecting 'm'
+    Esc1,  // encountered '[', expecting '3'|'4'
+    Esc2,  // encountered '3'|'4', expecting 'm'
 }
 
 fn count_chars(line: &[u16], color_mode: &ColorMode) -> usize {
@@ -533,9 +533,11 @@ fn count_chars(line: &[u16], color_mode: &ColorMode) -> usize {
         ColorMode::None
         | ColorMode::Html { .. } => line.len(),
 
-        ColorMode::Terminal => {
+        ColorMode::TerminalFg
+        | ColorMode::TerminalBg => {
             let mut curr_state = AnsiEscapeParseState::None;
             let mut char_count = 0;
+            let head = if let ColorMode::TerminalFg = color_mode { '3' } else { '4' } as u16;
 
             for c in line.iter() {
                 match curr_state {
@@ -563,7 +565,7 @@ fn count_chars(line: &[u16], color_mode: &ColorMode) -> usize {
                         }
                     },
                     AnsiEscapeParseState::Esc1 => {
-                        if *c == '3' as u16 {
+                        if *c == head {
                             curr_state = AnsiEscapeParseState::Esc2;
                         }
 
