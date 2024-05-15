@@ -2,6 +2,7 @@
 //! But `set_y_max("3.2")` uses internal ratio type which can represent any rational number perfectly.
 
 mod alignment;
+mod color;
 mod format;
 mod graph;
 mod interval;
@@ -12,9 +13,9 @@ mod utils;
 #[cfg(feature = "json")]
 mod json;
 
-pub use graph::Graph;
-
 pub use alignment::Alignment;
+pub use color::{Color, ColorMode};
+pub use graph::Graph;
 pub use skip_value::SkipValue;
 
 pub use graph::{merge_horiz, merge_vert};

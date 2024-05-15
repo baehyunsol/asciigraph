@@ -1,5 +1,6 @@
-use crate::lines::Lines;
 use crate::alignment::Alignment;
+use crate::color::ColorMode;
+use crate::lines::Lines;
 
 #[derive(Clone, Debug)]
 pub struct Interval {
@@ -159,19 +160,19 @@ pub fn draw_labeled_intervals(intervals: &Vec<Interval>, graph_width: usize) -> 
         for interval in row.iter() {
             if interval.start < 0 {
                 let i = interval.render_half(true, graph_width);
-                let l = Lines::from_string(&String::from_utf16_lossy(&i), Alignment::First);
+                let l = Lines::from_string(&String::from_utf16_lossy(&i), Alignment::First, &ColorMode::None);
                 result = result.blit(&l, 0, index, None);
             }
 
             else if interval.plot_end >= graph_width {
                 let i = interval.render_half(false, graph_width);
-                let l = Lines::from_string(&String::from_utf16_lossy(&i), Alignment::First);
+                let l = Lines::from_string(&String::from_utf16_lossy(&i), Alignment::First, &ColorMode::None);
                 result = result.blit(&l, interval.plot_start, index, None);
             }
 
             else {
                 let i = interval.render_full();
-                let l = Lines::from_string(&String::from_utf16_lossy(&i), Alignment::First);
+                let l = Lines::from_string(&String::from_utf16_lossy(&i), Alignment::First, &ColorMode::None);
                 result = result.blit(&l, interval.plot_start, index, None);
             }
         }

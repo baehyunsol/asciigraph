@@ -1,9 +1,10 @@
-use hmath::Ratio;
 use crate::alignment::Alignment;
+use crate::color::{Color, ColorMode};
+use crate::format::format_ratio;
 use crate::interval::{Interval, draw_labeled_intervals};
 use crate::lines::Lines;
-use crate::format::format_ratio;
 use crate::skip_value::SkipValue;
+use hmath::Ratio;
 use std::collections::HashSet;
 
 mod merge;
@@ -17,6 +18,7 @@ pub struct Graph {
 
     title: Option<String>,
     big_title: bool,
+    title_color: Option<Color>,
 
     plot_width: usize,
     plot_height: usize,
@@ -39,6 +41,9 @@ pub struct Graph {
     skip_value: SkipValue,
 
     paddings: [usize; 4],
+
+    color_mode: ColorMode,
+    primary_color: Option<Color>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -247,6 +252,7 @@ impl Graph {
                     &y_min,
                     &y_max,
                     false,  // no_overflow_char
+                    self.primary_color.clone(),
                 );
                 plot = plot.add_border([false, true, true, false]);
 
@@ -288,6 +294,7 @@ impl Graph {
                     &plot1_y_min,
                     &plot1_y_max,
                     true,  // no_overflow_char
+                    self.primary_color.clone(),
                 );
                 plot1 = plot1.add_border([false, true, true, false]);
 
@@ -305,6 +312,7 @@ impl Graph {
                     &plot2_y_min,
                     &plot2_y_max,
                     false,  // no_overflow_char
+                    self.primary_color.clone(),
                 );
                 plot2 = plot2.add_border([false, false, true, false]);
 
@@ -322,7 +330,8 @@ impl Graph {
                 plot1 = y_labels1.merge_horizontally(&plot1, Alignment::First);
                 plot2 = y_labels2.merge_horizontally(&plot2, Alignment::First);
 
-                let horizontal_line = Lines::from_string(&"~".repeat(plot1.get_width()), Alignment::First);
+                let mut horizontal_line = Lines::from_string(&"~".repeat(plot1.get_width()), Alignment::First, &ColorMode::None);
+                horizontal_line.set_color_all(self.primary_color.clone());
 
                 plot1 = horizontal_line.merge_vertically(&plot1, Alignment::First);
 
@@ -339,24 +348,24 @@ impl Graph {
         }
 
         if let Some(xal) = &self.x_axis_label {
-            let mut xal = Lines::from_string(xal, Alignment::First);
+            let mut xal = Lines::from_string(xal, Alignment::First, &ColorMode::None);
             xal = xal.add_padding([self.plot_height, 0, 0, 0]);
             plot = plot.merge_horizontally(&xal, Alignment::First);
         }
 
         if let Some(yal) = &self.y_axis_label {
-            let yal = Lines::from_string(yal, Alignment::First);
+            let yal = Lines::from_string(yal, Alignment::First, &ColorMode::None);
             plot = yal.merge_vertically(&plot, Alignment::First);
         }
 
         if let Some(t) = &self.title {
-            let title = draw_title(t, self.big_title);
+            let title = draw_title(t, self.big_title, self.title_color.clone());
             plot = title.merge_vertically(&plot, Alignment::Center);
         }
 
         plot = plot.add_padding(self.paddings);
 
-        plot.to_string()
+        plot.to_string(&self.color_mode)
     }
 
     fn draw_2d_graph(&self) -> String {
@@ -383,24 +392,24 @@ impl Graph {
         plot = y_labels.merge_horizontally(&plot, Alignment::First);
 
         if let Some(xal) = &self.x_axis_label {
-            let mut xal = Lines::from_string(xal, Alignment::First);
+            let mut xal = Lines::from_string(xal, Alignment::First, &ColorMode::None);
             xal = xal.add_padding([self.plot_height, 0, 0, 0]);
             plot = plot.merge_horizontally(&xal, Alignment::First);
         }
 
         if let Some(yal) = &self.y_axis_label {
-            let yal = Lines::from_string(yal, Alignment::First);
+            let yal = Lines::from_string(yal, Alignment::First, &ColorMode::None);
             plot = yal.merge_vertically(&plot, Alignment::First);
         }
 
         if let Some(t) = &self.title {
-            let title = draw_title(t, self.big_title);
+            let title = draw_title(t, self.big_title, self.title_color.clone());
             plot = title.merge_vertically(&plot, Alignment::Center);
         }
 
         plot = plot.add_padding(self.paddings);
 
-        plot.to_string()
+        plot.to_string(&self.color_mode)
     }
 
     fn adjust_all_labeled_intervals(&mut self) {
@@ -553,24 +562,32 @@ fn get_min_max_diff(v: &Vec<(String, Ratio)>, height: usize) -> (Ratio, Ratio, R
     (min, max, max_diff)
 }
 
-fn draw_title(title: &str, big_title: bool) -> Lines {
-    if big_title {
-        Lines::from_string(&asciibox::render_string(title, asciibox::RenderOption::default()), Alignment::First)
+fn draw_title(title: &str, big_title: bool, title_color: Option<Color>) -> Lines {
+    let mut result = if big_title {
+        Lines::from_string(&asciibox::render_string(title, asciibox::RenderOption::default()), Alignment::First, &ColorMode::None)
     }
 
     else {
-        Lines::from_string(title, Alignment::Center)
-    }
+        Lines::from_string(title, Alignment::Center, &ColorMode::None)
+    };
+
+    result.set_color_all(title_color);
+
+    result
 }
 
 // no axis
 fn draw_y_labels_2d_plot(y_labels: &Vec<Option<String>>) -> Lines {
-    Lines::from_string(&y_labels.iter().map(
-        |s| match s {
-            Some(s) => s.replace("\n", " "),
-            _ => String::new(),
-        }
-    ).collect::<Vec<String>>().join("\n"), Alignment::Last)
+    Lines::from_string(
+        &y_labels.iter().map(
+            |s| match s {
+                Some(s) => s.replace("\n", " "),
+                _ => String::new(),
+            }
+        ).collect::<Vec<String>>().join("\n"),
+        Alignment::Last,
+        &ColorMode::None,
+    )
 }
 
 // no axis
@@ -596,7 +613,7 @@ fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, margin: us
         labels.push(curr_label);
     }
 
-    Lines::from_string(&labels.join("\n"), Alignment::Last)
+    Lines::from_string(&labels.join("\n"), Alignment::Last, &ColorMode::None)
 }
 
 // no axis
@@ -624,7 +641,7 @@ fn draw_x_labels<T>(data: &Vec<(String, T)>, width: usize, margin: usize) -> Lin
         }
 
         for (lab_ind, c) in curr_label.chars().enumerate() {
-            let c = if c == '\n' { 32 } else { c as u16 };
+            let c = if c == '\n' { ' ' as u16 } else { c as u16 };
 
             result.set(x + lab_ind, y_ind, c);
         }
@@ -663,7 +680,7 @@ fn plot_2d(data: &Vec<(usize, usize, u16)>, width: usize, height: usize) -> Line
 }
 
 // no axis, no labels, only plots
-fn plot_1d(data: &Vec<(String, Ratio)>, width: usize, height: usize, y_min: &Ratio, y_max: &Ratio, no_overflow_char: bool) -> Lines {
+fn plot_1d(data: &Vec<(String, Ratio)>, width: usize, height: usize, y_min: &Ratio, y_max: &Ratio, no_overflow_char: bool, overflow_char_color: Option<Color>) -> Lines {
     let mut result = Lines::new(width, height);
     let y_diff = y_max.sub_rat(&y_min);
 
@@ -695,6 +712,7 @@ fn plot_1d(data: &Vec<(String, Ratio)>, width: usize, height: usize, y_min: &Rat
 
         if overflow && !no_overflow_char {
             result.set(x, 0, '^' as u16);
+            result.set_color(x, 0, overflow_char_color.clone());
         }
 
         else {

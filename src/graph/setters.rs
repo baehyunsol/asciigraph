@@ -1,4 +1,5 @@
 use crate::Graph;
+use crate::color::{Color, ColorMode};
 use crate::graph::GraphData;
 use crate::interval::Interval;
 use crate::skip_value::SkipValue;
@@ -279,6 +280,12 @@ impl Graph {
         self
     }
 
+    pub fn set_title_color(&mut self, title_color: Option<Color>) -> &mut Self {
+        self.title_color = title_color;
+
+        self
+    }
+
     pub fn set_x_axis_label(&mut self, x_axis_label: &str) -> &mut Self {
         self.x_axis_label = Some(x_axis_label.to_string());
 
@@ -318,6 +325,18 @@ impl Graph {
 
         self
     }
+
+    pub fn set_primary_color(&mut self, color: Option<Color>) -> &mut Self {
+        self.primary_color = color;
+
+        self
+    }
+
+    pub fn set_color_mode(&mut self, color_mode: ColorMode) -> &mut Self {
+        self.color_mode = color_mode;
+
+        self
+    }
 }
 
 impl Default for Graph {
@@ -334,11 +353,14 @@ impl Default for Graph {
             y_min: None,
             pretty_y: Some(Ratio::try_from(0.5).unwrap()),
             title: None,
+            title_color: None,
             skip_value: SkipValue::Automatic,
             x_axis_label: None,
             y_axis_label: None,
             labeled_intervals: vec![],
             big_title: false,
+            color_mode: ColorMode::None,
+            primary_color: None,
         }
     }
 }
