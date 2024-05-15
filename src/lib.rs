@@ -8,6 +8,7 @@ mod graph;
 mod interval;
 mod lines;
 mod skip_value;
+mod table;
 mod utils;
 
 #[cfg(feature = "json")]
