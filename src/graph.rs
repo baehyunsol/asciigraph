@@ -1,11 +1,12 @@
 use crate::alignment::Alignment;
 use crate::color::{Color, ColorMode};
-use crate::format::format_ratio;
+use crate::format::NumberFormatter;
 use crate::interval::{Interval, draw_labeled_intervals};
 use crate::lines::Lines;
 use crate::skip_value::SkipValue;
 use hmath::Ratio;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 mod merge;
 mod setters;
@@ -37,6 +38,8 @@ pub struct Graph {
     y_max: Option<Ratio>,
 
     pretty_y: Option<Ratio>,
+
+    y_label_formatter: Arc<dyn NumberFormatter>,
 
     // see comments in setters
     skip_value: SkipValue,
@@ -291,7 +294,13 @@ impl Graph {
                 );
                 plot = plot.add_border([false, true, true, false]);
 
-                let y_labels = draw_y_labels_1d_plot(&y_min, &y_max, self.plot_height, self.y_label_margin);
+                let y_labels = draw_y_labels_1d_plot(
+                    &y_min,
+                    &y_max,
+                    self.plot_height,
+                    self.y_label_margin,
+                    &self.y_label_formatter,
+                );
                 y_labels_len = y_labels.get_width();
 
                 y_labels.merge_horizontally(&plot, Alignment::First)
@@ -352,8 +361,20 @@ impl Graph {
                 );
                 plot2 = plot2.add_border([false, false, true, false]);
 
-                let mut y_labels1 = draw_y_labels_1d_plot(&plot1_y_min, &plot1_y_max, height1, self.y_label_margin);
-                let mut y_labels2 = draw_y_labels_1d_plot(&plot2_y_min, &plot2_y_max, height2, self.y_label_margin);
+                let mut y_labels1 = draw_y_labels_1d_plot(
+                    &plot1_y_min,
+                    &plot1_y_max,
+                    height1,
+                    self.y_label_margin,
+                    &self.y_label_formatter,
+                );
+                let mut y_labels2 = draw_y_labels_1d_plot(
+                    &plot2_y_min,
+                    &plot2_y_max,
+                    height2,
+                    self.y_label_margin,
+                    &self.y_label_formatter,
+                );
 
                 if y_labels1.get_width() < y_labels2.get_width() {
                     y_labels1 = y_labels1.add_padding([0, 0, y_labels2.get_width() - y_labels1.get_width(), 0]);
@@ -639,7 +660,13 @@ fn draw_y_labels_2d_plot(y_labels: &Vec<Option<String>>) -> Lines {
 }
 
 // no axis
-fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, margin: usize) -> Lines {
+fn draw_y_labels_1d_plot(
+    y_min: &Ratio,
+    y_max: &Ratio,
+    height: usize,
+    margin: usize,
+    formatter: &Arc<dyn NumberFormatter>,
+) -> Lines {
     let mut labels = Vec::with_capacity(height);
     let y_diff = y_max.sub_rat(y_min);
     let y_label_step = y_diff.div_i32(height as i32);
@@ -652,7 +679,7 @@ fn draw_y_labels_1d_plot(y_min: &Ratio, y_max: &Ratio, height: usize, margin: us
         }
 
         let curr_y = y_max.sub_rat(&y_label_step.mul_i32(y as i32));
-        let curr_label = format_ratio(&curr_y);
+        let curr_label = formatter.f(&curr_y);
 
         if curr_label.len() > curr_max_width {
             curr_max_width = curr_label.len();

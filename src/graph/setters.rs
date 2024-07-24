@@ -1,9 +1,11 @@
 use crate::Graph;
 use crate::color::{Color, ColorMode};
+use crate::format::{DefaultFormatter, NumberFormatter};
 use crate::graph::GraphData;
 use crate::interval::Interval;
 use crate::skip_value::SkipValue;
 use hmath::Ratio;
+use std::sync::Arc;
 
 impl Graph {
 
@@ -358,6 +360,12 @@ impl Graph {
 
         self
     }
+
+    pub fn set_y_label_formatter(&mut self, formatter: Box<dyn NumberFormatter>) -> &mut Self {
+        self.y_label_formatter = formatter.into();
+
+        self
+    }
 }
 
 impl Default for Graph {
@@ -373,6 +381,7 @@ impl Default for Graph {
             y_max: None,
             y_min: None,
             pretty_y: Some(Ratio::try_from(0.5).unwrap()),
+            y_label_formatter: Arc::new(DefaultFormatter),
             title: None,
             title_color: None,
             skip_value: SkipValue::Automatic,

@@ -1,19 +1,31 @@
 use hmath::{Ratio, BigInt};
 
-pub fn format_ratio(n: &Ratio) -> String {
-    if n.abs().lt_rat(&THOUSAND) {
-        n.to_approx_string(8)
-    }
+/// Ratio: https://docs.rs/hmath/latest/hmath/struct.Ratio.html \
+/// If you're too lazy to read the docs, just call `f64::try_from(n).unwrap()`.
+///
+/// It's default to `DefaultFormatter`.
+pub trait NumberFormatter {
+    fn f(&self, n: &Ratio) -> String;
+}
 
-    else {
-        let bi = n.truncate_bi();
+pub struct DefaultFormatter;
 
-        if bi.abs().lt_bi(&BILLION) {
-            bi.to_string()
+impl NumberFormatter for DefaultFormatter {
+    fn f(&self, n: &Ratio) -> String {
+        if n.abs().lt_rat(&THOUSAND) {
+            n.to_approx_string(8)
         }
 
         else {
-            bi.to_scientific_notation(4)
+            let bi = n.truncate_bi();
+
+            if bi.abs().lt_bi(&BILLION) {
+                bi.to_string()
+            }
+
+            else {
+                bi.to_scientific_notation(4)
+            }
         }
     }
 }

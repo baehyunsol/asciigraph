@@ -1,8 +1,33 @@
-use crate::{Color, ColorMode, Error, Graph, SkipValue};
+use crate::{
+    Color,
+    ColorMode,
+    DefaultFormatter,
+    Error,
+    Graph,
+    NumberFormatter,
+    SkipValue,
+};
 use crate::error::{JsonType, get_type};
 use hmath::Ratio;
 use json::JsonValue;
 use std::str::FromStr;
+
+pub struct YLabelFormatter {
+    base: Box<dyn NumberFormatter>,
+    prefix: String,
+    suffix: String,
+}
+
+impl NumberFormatter for YLabelFormatter {
+    fn f(&self, n: &Ratio) -> String {
+        format!(
+            "{}{}{}",
+            self.prefix,
+            self.base.f(n),
+            self.suffix,
+        )
+    }
+}
 
 impl Graph {
     /// The json must be an object or an array.
@@ -35,14 +60,23 @@ impl Graph {
     ///   - if it's not set, it's default to `SkipValue::Automatic`
     ///   - if you want it to be `SkipValue::None`, set this value to null
     ///   - otherwise, it's set to `SkipValue::Manual { from: v[0], to: v[1] }`
+    /// - y_label_prefix: String
+    /// - y_label_suffix: String
     ///
-    /// It checks types except when it expects `Number`. For `Number`s, it tries to be as generous as possible.
-    /// It even tries to parse strings into numbers.
+    /// For `Number`s in the above type annotations,\
+    /// 1. If it's an integer or a float in json, everything's fine.\
+    /// 2. If it's a string in json, it tries to parse it.\
+    /// 3. Otherwise, it's a type error.
     ///
     /// If it's an array, it interprets the array as `1d_data`.
     pub fn from_json(json_str: &str) -> Result<Self, Error> {
         let parsed = json::parse(json_str)?;
         let mut result = Graph::default();
+        let mut formatter = YLabelFormatter {
+            prefix: String::new(),
+            suffix: String::new(),
+            base: Box::new(DefaultFormatter),
+        };
 
         result.set_skip_range(SkipValue::Automatic);
 
@@ -374,12 +408,37 @@ impl Graph {
                             });
                         },
                     },
+                    "y_label_prefix" => match value.as_str() {
+                        Some(p) => {
+                            formatter.prefix = p.to_string();
+                        },
+                        _ => {
+                            return Err(Error::JsonTypeError {
+                                key: Some(key.to_string()),
+                                expected: JsonType::String,
+                                got: get_type(value),
+                            });
+                        },
+                    },
+                    "y_label_suffix" => match value.as_str() {
+                        Some(p) => {
+                            formatter.suffix = p.to_string();
+                        },
+                        _ => {
+                            return Err(Error::JsonTypeError {
+                                key: Some(key.to_string()),
+                                expected: JsonType::String,
+                                got: get_type(value),
+                            });
+                        },
+                    },
                     _ => {
                         return Err(Error::UnknownKey(key.to_string()));
                     },
                 }
             }
 
+            result.set_y_label_formatter(Box::new(formatter));
             Ok(result)
         }
 

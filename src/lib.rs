@@ -19,7 +19,15 @@ mod json;
 
 pub use alignment::Alignment;
 pub use color::{Color, ColorMode};
-pub use graph::{Graph, merge_horiz, merge_vert};
+pub use format::{
+    DefaultFormatter,
+    NumberFormatter,
+};
+pub use graph::{
+    Graph,
+    merge_horiz,
+    merge_vert,
+};
 pub use skip_value::SkipValue;
 
 #[cfg(feature = "json")]
