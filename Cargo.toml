@@ -9,6 +9,7 @@ license = "MIT"
 
 [dependencies]
 asciibox = "0.1.0"
+clap = { version = "4.5.9", features = ["derive"] }
 hmath = "0.1.17"
 json = { version = "0.12.4", optional = true }
 lazy_static = "1.4.0"

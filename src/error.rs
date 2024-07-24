@@ -1,5 +1,6 @@
 use json::JsonValue;
 
+#[derive(Debug)]
 pub enum Error {
     JsonError(json::Error),
     JsonTypeError {
@@ -31,6 +32,7 @@ impl From<hmath::ConversionError> for Error {
 }
 
 /// used to represent json types in `Error`
+#[derive(Debug)]
 pub enum JsonType {
     Any,
     Null,
