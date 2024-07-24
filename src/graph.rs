@@ -269,7 +269,7 @@ impl Graph {
             }
         }
 
-        let mut y_labels_len;
+        let y_labels_len;
 
         let mut plot = match &skip_range {
             None => {

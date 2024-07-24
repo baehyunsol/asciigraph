@@ -12,11 +12,15 @@ mod table;
 mod utils;
 
 #[cfg(feature = "json")]
+mod error;
+
+#[cfg(feature = "json")]
 mod json;
 
 pub use alignment::Alignment;
 pub use color::{Color, ColorMode};
-pub use graph::Graph;
+pub use graph::{Graph, merge_horiz, merge_vert};
 pub use skip_value::SkipValue;
 
-pub use graph::{merge_horiz, merge_vert};
+#[cfg(feature = "json")]
+pub use error::{Error, JsonType};

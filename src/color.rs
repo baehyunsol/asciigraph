@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 // from https://baehyunsol.github.io/MDxt-Reference.html#colors
 #[derive(Clone, Debug, PartialEq)]
 pub enum Color {
@@ -91,6 +93,35 @@ impl Color {
     }
 }
 
+impl FromStr for Color {
+    type Err = String;
+
+    /// returns Err(s) if it fails
+    fn from_str(s: &str) -> Result<Color, String> {
+        match s.replace(" ", "").replace("_", "").replace("-", "").to_ascii_lowercase() {
+            s if s == "black" => Ok(Color::Black),
+            s if s == "dark" => Ok(Color::Dark),
+            s if s == "gray" => Ok(Color::Gray),
+            s if s == "lightgray" => Ok(Color::Lightgray),
+            s if s == "white" => Ok(Color::White),
+            s if s == "red" => Ok(Color::Red),
+            s if s == "green" => Ok(Color::Green),
+            s if s == "blue" => Ok(Color::Blue),
+            s if s == "brown" => Ok(Color::Brown),
+            s if s == "slateblue" => Ok(Color::Slateblue),
+            s if s == "seagreen" => Ok(Color::Seagreen),
+            s if s == "aqua" => Ok(Color::Aqua),
+            s if s == "emerald" => Ok(Color::Emerald),
+            s if s == "violet" => Ok(Color::Violet),
+            s if s == "turquoise" => Ok(Color::Turquoise),
+            s if s == "pink" => Ok(Color::Pink),
+            s if s == "grassgreen" => Ok(Color::Grassgreen),
+            s if s == "gold" => Ok(Color::Gold),
+            _ => Err(s.to_string()),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum ColorMode {
     None,
@@ -149,6 +180,20 @@ impl ColorMode {
             }
 
             buffer.into_iter().collect()
+        }
+    }
+}
+
+impl FromStr for ColorMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, String> {
+        match s.replace(" ", "").replace("_", "").replace("-", "").to_ascii_lowercase() {
+            s if s == "none" => Ok(ColorMode::None),
+            s if s == "html" => Ok(ColorMode::Html { prefix: String::new() }),  // TODO: make it configurable
+            s if s == "terminalfg" => Ok(ColorMode::TerminalFg),
+            s if s == "terminalbg" => Ok(ColorMode::TerminalBg),
+            _ => Err(s.to_string()),
         }
     }
 }
