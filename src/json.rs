@@ -63,6 +63,7 @@ impl Graph {
     /// - y_label_prefix: String
     /// - y_label_suffix: String
     /// - labeled_intervals: Array[[Integer, Integer, String]]
+    /// - horizontal_break: [Integer, Integer]
     ///
     /// For `Number`s in the above type annotations,
     ///
@@ -492,6 +493,45 @@ impl Graph {
                             return Err(Error::JsonTypeError {
                                 key: Some(key.to_string()),
                                 expected: JsonType::Array(Box::new(JsonType::Array(Box::new(JsonType::Any)))),
+                                got: get_type(value),
+                            });
+                        },
+                    },
+                    "horizontal_break" => match value {
+                        JsonValue::Array(numbers) => if numbers.len() == 2 {
+                            let start = match numbers[0].as_usize() {
+                                Some(n) => n,
+                                _ => {
+                                    return Err(Error::JsonTypeError {
+                                        key: Some(key.to_string()),
+                                        expected: JsonType::Integer,
+                                        got: get_type(&numbers[0]),
+                                    });
+                                },
+                            };
+                            let end = match numbers[1].as_usize() {
+                                Some(n) => n,
+                                _ => {
+                                    return Err(Error::JsonTypeError {
+                                        key: Some(key.to_string()),
+                                        expected: JsonType::Integer,
+                                        got: get_type(&numbers[1]),
+                                    });
+                                },
+                            };
+
+                            result.set_horizontal_break(start, end);
+                        } else {
+                            return Err(Error::JsonArrayLengthError {
+                                key: Some(key.to_string()),
+                                expected: 2,
+                                got: numbers.len(),
+                            });
+                        },
+                        _ => {
+                            return Err(Error::JsonTypeError {
+                                key: Some(key.to_string()),
+                                expected: JsonType::Array(Box::new(JsonType::Integer)),
                                 got: get_type(value),
                             });
                         },
