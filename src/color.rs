@@ -130,7 +130,7 @@ pub enum ColorMode {
     Html { prefix: String },
 
     // https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
-    /// https://en.wikipedia.org/wiki/ANSI_escape_code
+    /// <https://en.wikipedia.org/wiki/ANSI_escape_code>
     TerminalFg,
     TerminalBg,
 }

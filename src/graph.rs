@@ -45,6 +45,7 @@ pub struct Graph {
     skip_value: SkipValue,
     skip_skip_range: Option<(Option<Ratio>, Option<Ratio>)>,
 
+    // TODO: Vec<(usize, usize)>?
     horizontal_break: Option<(usize, usize)>,
 
     paddings: [usize; 4],

@@ -51,21 +51,23 @@ impl Graph {
     /// - y_axis_label: String
     /// - big_title: Bool
     /// - color_title: String
-    ///   - https://docs.rs/asciigraph/latest/asciigraph/enum.Color.html
+    ///   - <<https://docs.rs/asciigraph/latest/asciigraph/enum.Color.html>>
     /// - primary_color: String
-    ///   - https://docs.rs/asciigraph/latest/asciigraph/enum.Color.html
+    ///   - <<https://docs.rs/asciigraph/latest/asciigraph/enum.Color.html>>
     /// - color_mode: String
-    ///   - https://docs.rs/asciigraph/latest/asciigraph/enum.ColorMode.html
+    ///   - <<https://docs.rs/asciigraph/latest/asciigraph/enum.ColorMode.html>>
     /// - skip_range: Optional[[Number, Number]]
     ///   - if it's not set, it's default to `SkipValue::Automatic`
     ///   - if you want it to be `SkipValue::None`, set this value to null
     ///   - otherwise, it's set to `SkipValue::Manual { from: v[0], to: v[1] }`
     /// - y_label_prefix: String
     /// - y_label_suffix: String
+    /// - labeled_intervals: Array[[Integer, Integer, String]]
     ///
-    /// For `Number`s in the above type annotations,\
-    /// 1. If it's an integer or a float in json, everything's fine.\
-    /// 2. If it's a string in json, it tries to parse it.\
+    /// For `Number`s in the above type annotations,
+    ///
+    /// 1. If it's an integer or a float in json, everything's fine.
+    /// 2. If it's a string in json, it tries to parse it.
     /// 3. Otherwise, it's a type error.
     ///
     /// If it's an array, it interprets the array as `1d_data`.
@@ -428,6 +430,68 @@ impl Graph {
                             return Err(Error::JsonTypeError {
                                 key: Some(key.to_string()),
                                 expected: JsonType::String,
+                                got: get_type(value),
+                            });
+                        },
+                    },
+                    "labeled_intervals" => match value {
+                        JsonValue::Array(intervals) => {
+                            for interval in intervals.iter() {
+                                match interval {
+                                    JsonValue::Array(interval) => if interval.len() == 3 {
+                                        let start = match interval[0].as_i32() {
+                                            Some(n) => n,
+                                            _ => {
+                                                return Err(Error::JsonTypeError {
+                                                    key: Some(key.to_string()),
+                                                    expected: JsonType::Integer,
+                                                    got: get_type(&interval[0]),
+                                                });
+                                            },
+                                        };
+                                        let end = match interval[1].as_i32() {
+                                            Some(n) => n,
+                                            _ => {
+                                                return Err(Error::JsonTypeError {
+                                                    key: Some(key.to_string()),
+                                                    expected: JsonType::Integer,
+                                                    got: get_type(&interval[1]),
+                                                });
+                                            },
+                                        };
+                                        let label = match interval[2].as_str() {
+                                            Some(s) => s,
+                                            _ => {
+                                                return Err(Error::JsonTypeError {
+                                                    key: Some(key.to_string()),
+                                                    expected: JsonType::String,
+                                                    got: get_type(&interval[2]),
+                                                });
+                                            },
+                                        };
+
+                                        result.add_labeled_interval(start, end, label);
+                                    } else {
+                                        return Err(Error::JsonArrayLengthError {
+                                            key: Some(key.to_string()),
+                                            expected: 3,
+                                            got: interval.len(),
+                                        });
+                                    },
+                                    _ => {
+                                        return Err(Error::JsonTypeError {
+                                            key: Some(key.to_string()),
+                                            expected: JsonType::Array(Box::new(JsonType::Any)),
+                                            got: get_type(value),
+                                        });
+                                    },
+                                }
+                            }
+                        },
+                        _ => {
+                            return Err(Error::JsonTypeError {
+                                key: Some(key.to_string()),
+                                expected: JsonType::Array(Box::new(JsonType::Array(Box::new(JsonType::Any)))),
                                 got: get_type(value),
                             });
                         },

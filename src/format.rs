@@ -1,6 +1,7 @@
 use hmath::{Ratio, BigInt};
 
-/// Ratio: https://docs.rs/hmath/latest/hmath/struct.Ratio.html \
+/// Ratio: <https://docs.rs/hmath/latest/hmath/struct.Ratio.html>
+///
 /// If you're too lazy to read the docs, just call `f64::try_from(n).unwrap()`.
 ///
 /// It's default to `DefaultFormatter`.
